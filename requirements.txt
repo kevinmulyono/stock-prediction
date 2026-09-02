@@ -14,10 +14,15 @@ seaborn>=0.12.0
 psycopg2-binary>=2.9.9
 SQLAlchemy>=2.0.0
 
-# Machine Learning & Modeling (Classical ML - Track A)
+# Machine Learning & Modeling (Classical ML - Track A & B)
 scikit-learn>=1.3.0
 xgboost>=2.0.0
+lightgbm>=4.0.0
+
+# Deep Learning (Track B)
+torch>=2.0.0
 
 # Interactive Notebooks
 jupyter>=1.0.0
 ipykernel>=6.25.0
+
