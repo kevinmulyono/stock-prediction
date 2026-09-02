@@ -1,6 +1,0 @@
-ticker,initial_rows,duplicates_removed,zero_vol_removed,anomalies_removed,final_cleaned_rows,start_date,end_date,output_path
-ASII.JK,2124,0,46,0,2078,2018-01-02,2026-09-01,../data/processed\ASII_JK_cleaned.csv
-BBCA.JK,2125,0,47,0,2078,2018-01-02,2026-09-01,../data/processed\BBCA_JK_cleaned.csv
-BBRI.JK,2125,0,45,0,2080,2018-01-02,2026-09-01,../data/processed\BBRI_JK_cleaned.csv
-BMRI.JK,2125,0,46,0,2079,2018-01-02,2026-09-01,../data/processed\BMRI_JK_cleaned.csv
-TLKM.JK,2124,0,46,0,2078,2018-01-02,2026-09-01,../data/processed\TLKM_JK_cleaned.csv
