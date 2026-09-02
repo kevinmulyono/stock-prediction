@@ -1,0 +1,62 @@
+[
+  {
+    "ticker": "ASII.JK",
+    "observations": 2077,
+    "ann_return_pct": 5.22,
+    "ann_volatility_pct": 32.83,
+    "sharpe_ratio_zero_rf": 0.16,
+    "max_drawdown_pct": -60.7,
+    "skewness": 0.34,
+    "excess_kurtosis": 3.838,
+    "up_days_ratio": 0.478,
+    "volume_spikes_count": 71
+  },
+  {
+    "ticker": "BBCA.JK",
+    "observations": 2077,
+    "ann_return_pct": 10.94,
+    "ann_volatility_pct": 25.96,
+    "sharpe_ratio_zero_rf": 0.42,
+    "max_drawdown_pct": -51.79,
+    "skewness": 0.678,
+    "excess_kurtosis": 8.887,
+    "up_days_ratio": 0.492,
+    "volume_spikes_count": 80
+  },
+  {
+    "ticker": "BBRI.JK",
+    "observations": 2079,
+    "ann_return_pct": 11.4,
+    "ann_volatility_pct": 33.1,
+    "sharpe_ratio_zero_rf": 0.34,
+    "max_drawdown_pct": -52.43,
+    "skewness": 0.582,
+    "excess_kurtosis": 6.458,
+    "up_days_ratio": 0.499,
+    "volume_spikes_count": 64
+  },
+  {
+    "ticker": "BMRI.JK",
+    "observations": 2078,
+    "ann_return_pct": 12.78,
+    "ann_volatility_pct": 33.83,
+    "sharpe_ratio_zero_rf": 0.38,
+    "max_drawdown_pct": -54.26,
+    "skewness": 0.206,
+    "excess_kurtosis": 4.31,
+    "up_days_ratio": 0.502,
+    "volume_spikes_count": 63
+  },
+  {
+    "ticker": "TLKM.JK",
+    "observations": 2077,
+    "ann_return_pct": 4.6,
+    "ann_volatility_pct": 32.24,
+    "sharpe_ratio_zero_rf": 0.14,
+    "max_drawdown_pct": -46.69,
+    "skewness": 0.263,
+    "excess_kurtosis": 5.188,
+    "up_days_ratio": 0.484,
+    "volume_spikes_count": 73
+  }
+]

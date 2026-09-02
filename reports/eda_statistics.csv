@@ -1,0 +1,6 @@
+ticker,observations,ann_return_pct,ann_volatility_pct,sharpe_ratio_zero_rf,max_drawdown_pct,skewness,excess_kurtosis,up_days_ratio,volume_spikes_count
+ASII.JK,2077,5.22,32.83,0.16,-60.7,0.34,3.838,0.478,71
+BBCA.JK,2077,10.94,25.96,0.42,-51.79,0.678,8.887,0.492,80
+BBRI.JK,2079,11.4,33.1,0.34,-52.43,0.582,6.458,0.499,64
+BMRI.JK,2078,12.78,33.83,0.38,-54.26,0.206,4.31,0.502,63
+TLKM.JK,2077,4.6,32.24,0.14,-46.69,0.263,5.188,0.484,73
