@@ -1,26 +1,32 @@
-# Environments
+# === Virtual Environments (NEVER commit these) ===
 venv/
 env/
+.venv/
 .env
 
-# Python
+# === Python Compiled Files ===
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .pytest_cache/
 
-# Jupyter
-.ipynb_checkpoints
+# === Jupyter Checkpoints ===
+.ipynb_checkpoints/
 
-# IDEs
+# === IDEs ===
 .vscode/
 .idea/
 
-# Database
+# === Database Files ===
 *.db
 *.sqlite3
 
-# Data (Optional: uncomment if you don't want to push raw data to github)
-# data/raw/*.csv
-# data/processed/*.csv
+# === Local Data (raw/processed/reports) ===
+data/raw/
+data/processed/
+reports/figures/
+
+# === Model Artifacts (large files) ===
+models/*.pkl
+models/*.bin
