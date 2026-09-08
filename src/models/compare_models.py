@@ -99,9 +99,9 @@ def run_full_evaluation(
     # -------------------------------------------------------------
     logger.info("Running inference on Validation Set (2024)...")
     val_lgbm_prob = lgbm_model.predict_proba(val_df[feature_cols])
-    val_lstm_prob, val_meta = lstm_trainer.predict_proba(val_df, feature_cols)
+    val_lstm_prob, val_meta = lstm_trainer.predict_proba(val_df, feature_cols, warmup_df=train_df)
     
-    # Align validation data (LSTM uses seq_length warmup per ticker)
+    # Align validation data (using warmup from train_df ensures zero dropped rows)
     # Match dates and tickers between LGBM and LSTM
     val_merged = val_df.copy()
     val_merged["prob_lgbm"] = val_lgbm_prob
@@ -133,7 +133,7 @@ def run_full_evaluation(
     # -------------------------------------------------------------
     logger.info("Running inference on Test Set (2025+)...")
     test_lgbm_prob = lgbm_model.predict_proba(test_df[feature_cols])
-    test_lstm_prob, test_meta = lstm_trainer.predict_proba(test_df, feature_cols)
+    test_lstm_prob, test_meta = lstm_trainer.predict_proba(test_df, feature_cols, warmup_df=val_df)
     
     test_merged = test_df.copy()
     test_merged["prob_lgbm"] = test_lgbm_prob

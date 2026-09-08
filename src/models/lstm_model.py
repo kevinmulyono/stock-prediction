@@ -287,15 +287,33 @@ class LSTMStockTrainer:
     def predict_proba(
         self,
         df: pd.DataFrame,
-        feature_cols: List[str]
+        feature_cols: List[str],
+        warmup_df: Optional[pd.DataFrame] = None
     ) -> Tuple[np.ndarray, pd.DataFrame]:
         """
         Generates probability predictions P(Up) for sequences in the dataframe.
+        If warmup_df is provided (e.g. historical data preceding df), it prepends
+        the last (seq_length - 1) rows per ticker from warmup_df to avoid dropping
+        the initial (seq_length - 1) rows of df.
         Returns (probabilities, aligned_dataframe_metadata).
         """
         self.model.eval()
+        
+        target_df = df.copy()
+        target_df["_is_eval"] = True
+        
+        if warmup_df is not None and len(warmup_df) > 0:
+            warmup_parts = []
+            for ticker, grp in warmup_df.groupby("ticker"):
+                warmup_parts.append(grp.sort_values("date").tail(self.seq_length - 1))
+            warmup_tail = pd.concat(warmup_parts, ignore_index=True)
+            warmup_tail["_is_eval"] = False
+            combined_df = pd.concat([warmup_tail, target_df], ignore_index=True)
+        else:
+            combined_df = target_df
+            
         X_seq, _, meta_df, _ = build_sequences_by_ticker(
-            df, feature_cols, seq_length=self.seq_length, scaler=self.scaler, fit_scaler=False
+            combined_df, feature_cols, seq_length=self.seq_length, scaler=self.scaler, fit_scaler=False
         )
         
         dataset = StockSequenceDataset(X_seq, np.zeros(len(X_seq)))
@@ -308,7 +326,15 @@ class LSTMStockTrainer:
                 probs = self.model(X_batch)
                 preds_list.extend(probs.cpu().numpy())
                 
-        return np.array(preds_list), meta_df
+        preds_arr = np.array(preds_list)
+        
+        # Filter to only the target evaluation rows
+        if "_is_eval" in meta_df.columns:
+            mask = meta_df["_is_eval"] == True
+            preds_arr = preds_arr[mask.values]
+            meta_df = meta_df[mask].drop(columns=["_is_eval"]).reset_index(drop=True)
+            
+        return preds_arr, meta_df
 
     def save(self, model_path: str, scaler_path: str):
         """Saves model weights and scaler."""

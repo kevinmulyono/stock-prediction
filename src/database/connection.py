@@ -1,5 +1,7 @@
 import os
 import logging
+from contextlib import contextmanager
+from typing import Generator
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
 from src.database.models import Base
@@ -33,12 +35,25 @@ def init_db():
     Base.metadata.create_all(bind=engine)
     logger.info("Database schema initialized successfully.")
 
-
-def get_db_session() -> Session:
-    """Dependency helper to get database session."""
+@contextmanager
+def get_db_session() -> Generator[Session, None, None]:
+    """
+    Context manager for database sessions.
+    Ensures session commits on completion, rolls back on exception,
+    and is guaranteed to close cleanly in finally block.
+    
+    Usage:
+        with get_db_session() as session:
+            session.query(...)
+    """
     session = SessionLocal()
     try:
-        return session
+        yield session
+        session.commit()
     except Exception as e:
-        session.close()
+        session.rollback()
+        logger.error(f"Database session error: {e}")
         raise e
+    finally:
+        session.close()
+

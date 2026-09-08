@@ -25,7 +25,7 @@ DEFAULT_TICKERS = [
 ]
 
 DEFAULT_START_DATE = "2018-01-01"
-DEFAULT_END_DATE = "2026-09-02"
+DEFAULT_END_DATE = datetime.today().strftime("%Y-%m-%d")
 
 
 def fetch_ticker_data(

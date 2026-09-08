@@ -19,11 +19,11 @@ from typing import Dict, Tuple
 import joblib
 import numpy as np
 import pandas as pd
-from sklearn.calibration import CalibratedClassifierCV, calibration_curve
+from sklearn.calibration import CalibratedClassifierCV
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
-    accuracy_score, brier_score_loss, classification_report,
+    accuracy_score, brier_score_loss,
     f1_score, log_loss, precision_score, recall_score, roc_auc_score
 )
 from sklearn.preprocessing import StandardScaler
@@ -195,7 +195,6 @@ def train_xgboost(X_train, y_train, X_val, y_val) -> Tuple:
         subsample=0.8,
         colsample_bytree=0.8,
         scale_pos_weight=scale_pos_weight,
-        use_label_encoder=False,
         eval_metric="logloss",
         random_state=42,
         n_jobs=-1

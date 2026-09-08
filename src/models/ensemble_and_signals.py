@@ -86,74 +86,110 @@ def backtest_trading_strategy(
     """
     Simulates a daily trading strategy based on BUY/HOLD/SELL signals.
     
+    Multi-ticker safe:
+    - Tracks positions per ticker independently (eliminates cross-ticker position bleed).
+    - Aggregates equal-weighted daily returns across active tickers.
+    - Compares performance against Buy & Hold benchmark on the same universe & timeframe.
+    
     Strategy rules:
     - BUY  -> Long position (weight = +1.0)
-    - HOLD -> Maintain previous position
+    - HOLD -> Maintain previous position for that ticker
     - SELL -> Cash / Flat position (weight = 0.0)
-    - Compares performance against Buy & Hold benchmark.
+    - Fee  -> 0.15% IDX fee on position change (|pos_t - pos_{t-1}| * 0.0015)
     
     Returns:
     --------
-    Dictionary with key performance indicators (Sharpe, Returns, Drawdown, etc.)
+    Dictionary with key performance indicators (Sharpe, Returns, Drawdown, Win Rate, etc.)
     """
     df = df.copy().reset_index(drop=True)
     df["signal"] = signals
+    df["date"] = pd.to_datetime(df["date"])
     
-    # Calculate position
-    position = 0.0
-    positions = []
+    has_ticker = "ticker" in df.columns
     
-    for sig in signals:
-        if sig == "BUY":
-            position = 1.0
-        elif sig == "SELL":
+    # Track positions and trade costs per ticker independently
+    if has_ticker:
+        processed_dfs = []
+        for ticker, grp in df.groupby("ticker", sort=False):
+            grp = grp.sort_values(by="date").copy()
             position = 0.0
-        # If HOLD, position remains unchanged
-        positions.append(position)
-        
-    df["position"] = positions
-    # Position changes incur transaction costs
-    pos_change = np.abs(np.diff(positions, prepend=0.0))
-    df["cost"] = pos_change * transaction_cost_pct
+            positions = []
+            for sig in grp["signal"]:
+                if sig == "BUY":
+                    position = 1.0
+                elif sig == "SELL":
+                    position = 0.0
+                # If HOLD, position remains unchanged for this ticker
+                positions.append(position)
+            
+            grp["position"] = positions
+            pos_change = np.abs(np.diff(positions, prepend=0.0))
+            grp["pos_change"] = pos_change
+            grp["cost"] = pos_change * transaction_cost_pct
+            
+            actual_ret = grp["forward_return_1d"].fillna(0.0).values
+            grp["strategy_ret"] = (grp["position"].values * actual_ret) - grp["cost"].values
+            grp["benchmark_ret"] = actual_ret
+            processed_dfs.append(grp)
+            
+        sim_df = pd.concat(processed_dfs, ignore_index=True)
+    else:
+        sim_df = df.sort_values(by="date").copy()
+        position = 0.0
+        positions = []
+        for sig in sim_df["signal"]:
+            if sig == "BUY":
+                position = 1.0
+            elif sig == "SELL":
+                position = 0.0
+            positions.append(position)
+        sim_df["position"] = positions
+        pos_change = np.abs(np.diff(positions, prepend=0.0))
+        sim_df["pos_change"] = pos_change
+        sim_df["cost"] = pos_change * transaction_cost_pct
+        actual_ret = sim_df["forward_return_1d"].fillna(0.0).values
+        sim_df["strategy_ret"] = (sim_df["position"].values * actual_ret) - sim_df["cost"].values
+        sim_df["benchmark_ret"] = actual_ret
+
+    # Daily portfolio-level aggregation (Equal-weight across active tickers per date)
+    daily_portfolio = sim_df.groupby("date").agg({
+        "strategy_ret": "mean",
+        "benchmark_ret": "mean"
+    }).sort_index()
     
-    # Actual forward return R_{t+1}
-    actual_return = df["forward_return_1d"].fillna(0.0).values
-    strategy_daily_return = (df["position"].values * actual_return) - df["cost"].values
-    benchmark_daily_return = actual_return
-    
-    df["strategy_daily_return"] = strategy_daily_return
-    df["benchmark_daily_return"] = benchmark_daily_return
+    strategy_daily_return = daily_portfolio["strategy_ret"].values
+    benchmark_daily_return = daily_portfolio["benchmark_ret"].values
     
     # Cumulative curves
-    df["strategy_cum"] = (1.0 + strategy_daily_return).cumprod()
-    df["benchmark_cum"] = (1.0 + benchmark_daily_return).cumprod()
+    strategy_cum = (1.0 + strategy_daily_return).cumprod()
+    benchmark_cum = (1.0 + benchmark_daily_return).cumprod()
     
     # Total returns
-    strategy_total_return = float(df["strategy_cum"].iloc[-1] - 1.0)
-    benchmark_total_return = float(df["benchmark_cum"].iloc[-1] - 1.0)
+    strategy_total_return = float(strategy_cum[-1] - 1.0) if len(strategy_cum) > 0 else 0.0
+    benchmark_total_return = float(benchmark_cum[-1] - 1.0) if len(benchmark_cum) > 0 else 0.0
     
     # Annualized Sharpe (assuming 252 trading days)
-    strat_mean = np.mean(strategy_daily_return)
-    strat_std = np.std(strategy_daily_return) + 1e-10
+    strat_mean = np.mean(strategy_daily_return) if len(strategy_daily_return) > 0 else 0.0
+    strat_std = np.std(strategy_daily_return) + 1e-10 if len(strategy_daily_return) > 0 else 1e-10
     sharpe_ratio = float((strat_mean / strat_std) * np.sqrt(252))
     
-    bench_mean = np.mean(benchmark_daily_return)
-    bench_std = np.std(benchmark_daily_return) + 1e-10
+    bench_mean = np.mean(benchmark_daily_return) if len(benchmark_daily_return) > 0 else 0.0
+    bench_std = np.std(benchmark_daily_return) + 1e-10 if len(benchmark_daily_return) > 0 else 1e-10
     bench_sharpe = float((bench_mean / bench_std) * np.sqrt(252))
     
     # Max Drawdown
-    cum_max = np.maximum.accumulate(df["strategy_cum"].values)
-    drawdowns = (df["strategy_cum"].values - cum_max) / cum_max
-    max_drawdown = float(np.min(drawdowns))
+    cum_max = np.maximum.accumulate(strategy_cum) if len(strategy_cum) > 0 else np.array([1.0])
+    drawdowns = (strategy_cum - cum_max) / cum_max if len(strategy_cum) > 0 else np.array([0.0])
+    max_drawdown = float(np.min(drawdowns)) if len(drawdowns) > 0 else 0.0
     
-    bench_cum_max = np.maximum.accumulate(df["benchmark_cum"].values)
-    bench_drawdowns = (df["benchmark_cum"].values - bench_cum_max) / bench_cum_max
-    bench_max_drawdown = float(np.min(bench_drawdowns))
+    bench_cum_max = np.maximum.accumulate(benchmark_cum) if len(benchmark_cum) > 0 else np.array([1.0])
+    bench_drawdowns = (benchmark_cum - bench_cum_max) / bench_cum_max if len(benchmark_cum) > 0 else np.array([0.0])
+    bench_max_drawdown = float(np.min(bench_drawdowns)) if len(bench_drawdowns) > 0 else 0.0
     
     # Trade statistics
-    num_trades = int(np.sum(pos_change > 0))
-    active_days = int(np.sum(df["position"] > 0))
-    win_trades = int(np.sum((df["position"] > 0) & (df["forward_return_1d"] > 0)))
+    num_trades = int(np.sum(sim_df["pos_change"] > 0))
+    active_days = int(np.sum(sim_df["position"] > 0))
+    win_trades = int(np.sum((sim_df["position"] > 0) & (sim_df["forward_return_1d"] > 0)))
     win_rate = float(win_trades / active_days) if active_days > 0 else 0.0
     
     return {
@@ -167,5 +203,6 @@ def backtest_trading_strategy(
         "win_rate": win_rate,
         "num_trades": num_trades,
         "active_days": active_days,
-        "total_days": len(df)
+        "total_days": int(sim_df["date"].nunique())
     }
+
