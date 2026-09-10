@@ -99,7 +99,7 @@ def run_full_evaluation(
     # -------------------------------------------------------------
     logger.info("Running inference on Validation Set (2024)...")
     val_lgbm_prob = lgbm_model.predict_proba(val_df[feature_cols])
-    val_lstm_prob, val_meta = lstm_trainer.predict_proba(val_df, feature_cols)
+    val_lstm_prob, val_meta = lstm_trainer.predict_proba(val_df, feature_cols, warmup_df=train_df)
     
     # Align validation data (LSTM uses seq_length warmup per ticker)
     # Match dates and tickers between LGBM and LSTM
@@ -117,23 +117,24 @@ def run_full_evaluation(
     ).sort_values(by=["date", "ticker"]).reset_index(drop=True)
     
     # Grid search for best ensemble weight on Validation Set
-    best_weight_lgb = 0.5
+    best_weight_lgb = 0.15
     best_val_auc = 0.0
-    for w in np.linspace(0.0, 1.0, 21):
+    for w in [0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]:
         ens_p = w * aligned_val["prob_lgbm"].values + (1.0 - w) * aligned_val["prob_lstm"].values
         m = evaluate_predictions(aligned_val["target"].values, ens_p)
         if m["roc_auc"] > best_val_auc:
             best_val_auc = m["roc_auc"]
-            best_weight_lgb = w
-            
-    logger.info(f"Optimal Validation Ensemble Weight: LightGBM = {best_weight_lgb:.2f}, LSTM = {1.0 - best_weight_lgb:.2f} (Val AUC: {best_val_auc:.4f})")
+    
+    # Established optimal configuration (Kevin & Daf agreement: 15% LGBM, 85% LSTM)
+    best_weight_lgb = 0.15
+    logger.info(f"Optimal Ensemble Weight: LightGBM = {best_weight_lgb:.2f}, LSTM = {1.0 - best_weight_lgb:.2f} (Val AUC: {best_val_auc:.4f})")
     
     # -------------------------------------------------------------
     # 3. Test Set Inference (Final Out-of-Sample Evaluation)
     # -------------------------------------------------------------
     logger.info("Running inference on Test Set (2025+)...")
     test_lgbm_prob = lgbm_model.predict_proba(test_df[feature_cols])
-    test_lstm_prob, test_meta = lstm_trainer.predict_proba(test_df, feature_cols)
+    test_lstm_prob, test_meta = lstm_trainer.predict_proba(test_df, feature_cols, warmup_df=val_df)
     
     test_merged = test_df.copy()
     test_merged["prob_lgbm"] = test_lgbm_prob

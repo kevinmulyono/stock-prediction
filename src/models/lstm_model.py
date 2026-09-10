@@ -63,15 +63,17 @@ def build_sequences_by_ticker(
     feature_cols: List[str],
     seq_length: int = 15,
     scaler: Optional[StandardScaler] = None,
-    fit_scaler: bool = False
+    fit_scaler: bool = False,
+    warmup_df: Optional[pd.DataFrame] = None
 ) -> Tuple[np.ndarray, np.ndarray, pd.DataFrame, StandardScaler]:
     """
     Builds sliding window sequences per ticker.
+    Supports warmup_df to provide sequence history for out-of-sample sets without dropping initial rows.
     
     Parameters:
     -----------
     df : pd.DataFrame
-        Market dataframe containing features and 'target'
+        Market dataframe containing features and optionally 'target'
     feature_cols : List[str]
         Feature columns to scale and sequence
     seq_length : int
@@ -80,6 +82,8 @@ def build_sequences_by_ticker(
         Optional pre-fitted scaler
     fit_scaler : bool
         If True, fits the scaler on df (must only be True for training set)
+    warmup_df : Optional[pd.DataFrame]
+        Historical dataframe (e.g. last rows of validation set) used as sequence history.
         
     Returns:
     --------
@@ -97,23 +101,38 @@ def build_sequences_by_ticker(
     all_targets = []
     meta_rows = []
     
+    if warmup_df is not None:
+        warmup_df = warmup_df.copy().sort_values(by=["ticker", "date"]).reset_index(drop=True)
+    
     for ticker, group in df.groupby("ticker"):
         group_df = group.reset_index(drop=True)
-        scaled_features = scaler.transform(group_df[feature_cols].values)
-        targets = group_df["target"].values
+        has_target = "target" in group_df.columns
+        targets = group_df["target"].values if has_target else np.zeros(len(group_df), dtype=np.float32)
         
-        # Build sliding windows
-        n_rows = len(group_df)
-        if n_rows < seq_length:
-            continue
+        if warmup_df is not None and ticker in warmup_df["ticker"].values:
+            ticker_warmup = warmup_df[warmup_df["ticker"] == ticker].tail(seq_length - 1).reset_index(drop=True)
+            combined = pd.concat([ticker_warmup, group_df], ignore_index=True)
+            scaled_combined = scaler.transform(combined[feature_cols].values)
+            n_warmup = len(ticker_warmup)
             
-        for i in range(seq_length - 1, n_rows):
-            seq = scaled_features[i - seq_length + 1 : i + 1]  # shape: (seq_length, n_features)
-            target = targets[i]
-            
-            all_seqs.append(seq)
-            all_targets.append(target)
-            meta_rows.append(group_df.iloc[i])
+            for j in range(len(group_df)):
+                idx = n_warmup + j
+                if idx - seq_length + 1 >= 0:
+                    seq = scaled_combined[idx - seq_length + 1 : idx + 1]
+                    all_seqs.append(seq)
+                    all_targets.append(targets[j])
+                    meta_rows.append(group_df.iloc[j])
+        else:
+            scaled_features = scaler.transform(group_df[feature_cols].values)
+            n_rows = len(group_df)
+            if n_rows < seq_length:
+                continue
+                
+            for i in range(seq_length - 1, n_rows):
+                seq = scaled_features[i - seq_length + 1 : i + 1]
+                all_seqs.append(seq)
+                all_targets.append(targets[i])
+                meta_rows.append(group_df.iloc[i])
             
     seq_array = np.array(all_seqs, dtype=np.float32)
     target_array = np.array(all_targets, dtype=np.float32)
@@ -287,15 +306,17 @@ class LSTMStockTrainer:
     def predict_proba(
         self,
         df: pd.DataFrame,
-        feature_cols: List[str]
+        feature_cols: List[str],
+        warmup_df: Optional[pd.DataFrame] = None
     ) -> Tuple[np.ndarray, pd.DataFrame]:
         """
         Generates probability predictions P(Up) for sequences in the dataframe.
+        Supports warmup_df to provide sequence history without dropping rows.
         Returns (probabilities, aligned_dataframe_metadata).
         """
         self.model.eval()
         X_seq, _, meta_df, _ = build_sequences_by_ticker(
-            df, feature_cols, seq_length=self.seq_length, scaler=self.scaler, fit_scaler=False
+            df, feature_cols, seq_length=self.seq_length, scaler=self.scaler, fit_scaler=False, warmup_df=warmup_df
         )
         
         dataset = StockSequenceDataset(X_seq, np.zeros(len(X_seq)))
