@@ -63,15 +63,17 @@ def build_sequences_by_ticker(
     feature_cols: List[str],
     seq_length: int = 15,
     scaler: Optional[StandardScaler] = None,
-    fit_scaler: bool = False
+    fit_scaler: bool = False,
+    warmup_df: Optional[pd.DataFrame] = None
 ) -> Tuple[np.ndarray, np.ndarray, pd.DataFrame, StandardScaler]:
     """
     Builds sliding window sequences per ticker.
+    Supports warmup_df to provide sequence history for out-of-sample sets without dropping initial rows.
     
     Parameters:
     -----------
     df : pd.DataFrame
-        Market dataframe containing features and 'target'
+        Market dataframe containing features and optionally 'target'
     feature_cols : List[str]
         Feature columns to scale and sequence
     seq_length : int
@@ -80,6 +82,8 @@ def build_sequences_by_ticker(
         Optional pre-fitted scaler
     fit_scaler : bool
         If True, fits the scaler on df (must only be True for training set)
+    warmup_df : Optional[pd.DataFrame]
+        Historical dataframe (e.g. last rows of validation set) used as sequence history.
         
     Returns:
     --------
@@ -97,23 +101,38 @@ def build_sequences_by_ticker(
     all_targets = []
     meta_rows = []
     
+    if warmup_df is not None:
+        warmup_df = warmup_df.copy().sort_values(by=["ticker", "date"]).reset_index(drop=True)
+    
     for ticker, group in df.groupby("ticker"):
         group_df = group.reset_index(drop=True)
-        scaled_features = scaler.transform(group_df[feature_cols].values)
-        targets = group_df["target"].values
+        has_target = "target" in group_df.columns
+        targets = group_df["target"].values if has_target else np.zeros(len(group_df), dtype=np.float32)
         
-        # Build sliding windows
-        n_rows = len(group_df)
-        if n_rows < seq_length:
-            continue
+        if warmup_df is not None and ticker in warmup_df["ticker"].values:
+            ticker_warmup = warmup_df[warmup_df["ticker"] == ticker].tail(seq_length - 1).reset_index(drop=True)
+            combined = pd.concat([ticker_warmup, group_df], ignore_index=True)
+            scaled_combined = scaler.transform(combined[feature_cols].values)
+            n_warmup = len(ticker_warmup)
             
-        for i in range(seq_length - 1, n_rows):
-            seq = scaled_features[i - seq_length + 1 : i + 1]  # shape: (seq_length, n_features)
-            target = targets[i]
-            
-            all_seqs.append(seq)
-            all_targets.append(target)
-            meta_rows.append(group_df.iloc[i])
+            for j in range(len(group_df)):
+                idx = n_warmup + j
+                if idx - seq_length + 1 >= 0:
+                    seq = scaled_combined[idx - seq_length + 1 : idx + 1]
+                    all_seqs.append(seq)
+                    all_targets.append(targets[j])
+                    meta_rows.append(group_df.iloc[j])
+        else:
+            scaled_features = scaler.transform(group_df[feature_cols].values)
+            n_rows = len(group_df)
+            if n_rows < seq_length:
+                continue
+                
+            for i in range(seq_length - 1, n_rows):
+                seq = scaled_features[i - seq_length + 1 : i + 1]
+                all_seqs.append(seq)
+                all_targets.append(targets[i])
+                meta_rows.append(group_df.iloc[i])
             
     seq_array = np.array(all_seqs, dtype=np.float32)
     target_array = np.array(all_targets, dtype=np.float32)
@@ -292,28 +311,12 @@ class LSTMStockTrainer:
     ) -> Tuple[np.ndarray, pd.DataFrame]:
         """
         Generates probability predictions P(Up) for sequences in the dataframe.
-        If warmup_df is provided (e.g. historical data preceding df), it prepends
-        the last (seq_length - 1) rows per ticker from warmup_df to avoid dropping
-        the initial (seq_length - 1) rows of df.
+        Supports warmup_df to provide sequence history without dropping rows.
         Returns (probabilities, aligned_dataframe_metadata).
         """
         self.model.eval()
-        
-        target_df = df.copy()
-        target_df["_is_eval"] = True
-        
-        if warmup_df is not None and len(warmup_df) > 0:
-            warmup_parts = []
-            for ticker, grp in warmup_df.groupby("ticker"):
-                warmup_parts.append(grp.sort_values("date").tail(self.seq_length - 1))
-            warmup_tail = pd.concat(warmup_parts, ignore_index=True)
-            warmup_tail["_is_eval"] = False
-            combined_df = pd.concat([warmup_tail, target_df], ignore_index=True)
-        else:
-            combined_df = target_df
-            
         X_seq, _, meta_df, _ = build_sequences_by_ticker(
-            combined_df, feature_cols, seq_length=self.seq_length, scaler=self.scaler, fit_scaler=False
+            df, feature_cols, seq_length=self.seq_length, scaler=self.scaler, fit_scaler=False, warmup_df=warmup_df
         )
         
         dataset = StockSequenceDataset(X_seq, np.zeros(len(X_seq)))
@@ -326,15 +329,7 @@ class LSTMStockTrainer:
                 probs = self.model(X_batch)
                 preds_list.extend(probs.cpu().numpy())
                 
-        preds_arr = np.array(preds_list)
-        
-        # Filter to only the target evaluation rows
-        if "_is_eval" in meta_df.columns:
-            mask = meta_df["_is_eval"] == True
-            preds_arr = preds_arr[mask.values]
-            meta_df = meta_df[mask].drop(columns=["_is_eval"]).reset_index(drop=True)
-            
-        return preds_arr, meta_df
+        return np.array(preds_list), meta_df
 
     def save(self, model_path: str, scaler_path: str):
         """Saves model weights and scaler."""

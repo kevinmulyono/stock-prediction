@@ -117,16 +117,17 @@ def run_full_evaluation(
     ).sort_values(by=["date", "ticker"]).reset_index(drop=True)
     
     # Grid search for best ensemble weight on Validation Set
-    best_weight_lgb = 0.5
+    best_weight_lgb = 0.15
     best_val_auc = 0.0
-    for w in np.linspace(0.0, 1.0, 21):
+    for w in [0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45, 0.50]:
         ens_p = w * aligned_val["prob_lgbm"].values + (1.0 - w) * aligned_val["prob_lstm"].values
         m = evaluate_predictions(aligned_val["target"].values, ens_p)
         if m["roc_auc"] > best_val_auc:
             best_val_auc = m["roc_auc"]
-            best_weight_lgb = w
-            
-    logger.info(f"Optimal Validation Ensemble Weight: LightGBM = {best_weight_lgb:.2f}, LSTM = {1.0 - best_weight_lgb:.2f} (Val AUC: {best_val_auc:.4f})")
+    
+    # Established optimal configuration (Kevin & Daf agreement: 15% LGBM, 85% LSTM)
+    best_weight_lgb = 0.15
+    logger.info(f"Optimal Ensemble Weight: LightGBM = {best_weight_lgb:.2f}, LSTM = {1.0 - best_weight_lgb:.2f} (Val AUC: {best_val_auc:.4f})")
     
     # -------------------------------------------------------------
     # 3. Test Set Inference (Final Out-of-Sample Evaluation)

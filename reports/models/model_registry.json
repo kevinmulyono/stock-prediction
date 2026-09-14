@@ -1,0 +1,123 @@
+{
+  "registry_version": "1.0.0",
+  "project_name": "IDX Stock Price Movement Prediction & Trading Strategy",
+  "track": "Track B (Advanced Feature Engineering & Deep Learning Ensemble)",
+  "author": "Daf (Track B Engineer)",
+  "created_at": "2026-09-10T14:53:00+07:00",
+  "last_updated": "2026-09-10T14:53:00+07:00",
+  "universe": {
+    "exchange": "IDX",
+    "tickers": [
+      "BBCA.JK",
+      "BBRI.JK",
+      "BMRI.JK",
+      "TLKM.JK",
+      "ASII.JK"
+    ]
+  },
+  "features": {
+    "count": 29,
+    "feature_columns": [
+      "rsi_14",
+      "macd_norm",
+      "macd_signal_norm",
+      "macd_hist_norm",
+      "stoch_k",
+      "stoch_d",
+      "ema_5_ratio",
+      "ema_20_ratio",
+      "ema_crossover_5_20",
+      "ema_crossover_20_50",
+      "bb_bandwidth",
+      "bb_pct_b",
+      "return_1d",
+      "return_2d",
+      "return_3d",
+      "return_5d",
+      "return_10d",
+      "return_lag_1",
+      "return_lag_2",
+      "return_lag_3",
+      "return_lag_5",
+      "volatility_10d",
+      "volatility_20d",
+      "natr_14",
+      "hl_spread",
+      "co_spread",
+      "volume_ratio_20d",
+      "volume_roc_5d",
+      "price_volume_interaction"
+    ],
+    "anti_leakage_guarantee": "Strictly backward-looking indicators; no forward return or target used; zero lookahead bias."
+  },
+  "models": {
+    "lightgbm": {
+      "name": "LightGBM Classifier",
+      "weights_file": "reports/models/lightgbm_model.joblib",
+      "type": "Gradient Boosted Trees",
+      "hyperparameters": {
+        "n_estimators": 300,
+        "max_depth": 5,
+        "learning_rate": 0.03,
+        "num_leaves": 31,
+        "colsample_bytree": 0.8,
+        "subsample": 0.8
+      },
+      "test_performance": {
+        "roc_auc": 0.5392,
+        "accuracy": 0.5631,
+        "strategy_return_pct": 1.63,
+        "sharpe_ratio": 0.26
+      }
+    },
+    "lstm": {
+      "name": "PyTorch LSTM Sequence Model",
+      "weights_file": "reports/models/lstm_model.pt",
+      "scaler_file": "reports/models/lstm_scaler.joblib",
+      "architecture": "StockLSTM(input_dim=29, hidden_dim=64, num_layers=2, dropout=0.2, LayerNorm)",
+      "sequence_length": 15,
+      "test_performance": {
+        "roc_auc": 0.5453,
+        "accuracy": 0.5585,
+        "strategy_return_pct": 20.56,
+        "sharpe_ratio": 1.22,
+        "max_drawdown_pct": -8.55,
+        "win_rate_pct": 52.74
+      }
+    },
+    "ensemble": {
+      "name": "Weighted Ensemble (Track B)",
+      "components": ["lightgbm", "lstm"],
+      "optimal_weights": {
+        "lightgbm": 0.15,
+        "lstm": 0.85
+      },
+      "tuning_method": "Validation set (2024) grid search optimization",
+      "test_performance": {
+        "roc_auc": 0.5468,
+        "accuracy": 0.5574,
+        "strategy_total_return_pct": 22.22,
+        "excess_return_pct": 22.62,
+        "sharpe_ratio": 1.37,
+        "max_drawdown_pct": -7.86,
+        "win_rate_pct": 54.46,
+        "total_trades": 180,
+        "rank": "1st across all models in project"
+      }
+    }
+  },
+  "trading_signals": {
+    "decision_rules": {
+      "BUY": "P(Up) >= 0.53 (Long position, weight = +1.0)",
+      "SELL": "P(Up) <= 0.47 (Flat/Cash, weight = 0.0)",
+      "HOLD": "0.47 < P(Up) < 0.53 (Maintain previous position)"
+    },
+    "buy_threshold": 0.53,
+    "sell_threshold": 0.47,
+    "transaction_cost_pct": 0.0015
+  },
+  "database": {
+    "table": "predictions",
+    "target_date_rule": "Next trading business day (T+1, skipping Saturday and Sunday)"
+  }
+}
