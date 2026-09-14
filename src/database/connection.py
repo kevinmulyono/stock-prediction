@@ -8,10 +8,13 @@ from src.database.models import Base
 
 logger = logging.getLogger(__name__)
 
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+DEFAULT_DB_PATH = os.path.join(PROJECT_ROOT, "data", "stock_prediction.db").replace("\\", "/")
+
 # Default to PostgreSQL connection string from environment, fallback to SQLite for local development
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "sqlite:///data/stock_prediction.db"
+    f"sqlite:///{DEFAULT_DB_PATH}"
 )
 
 # Connect arguments
