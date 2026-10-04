@@ -244,9 +244,17 @@ function initTradingViewChart() {
 }
 
 function handleChartResize() {
-  if (state.tvChart && elements.candlestickChartContainer) {
-    const width = elements.candlestickChartContainer.clientWidth;
-    const height = elements.candlestickChartContainer.clientHeight;
+  if (!state.tvChart || !elements.candlestickChartContainer) return;
+
+  if (state.isFullscreen) {
+    const width = Math.max(400, window.innerWidth - 64);
+    const height = Math.max(300, window.innerHeight - 175);
+    state.tvChart.applyOptions({ width, height });
+  } else {
+    const panel = elements.chartPanel;
+    // Calculate width strictly bounded by panel client width minus padding
+    const width = Math.max(300, Math.floor(panel.clientWidth - 48));
+    const height = 440;
     state.tvChart.applyOptions({ width, height });
   }
 }
@@ -419,36 +427,25 @@ function toggleFullscreen() {
   if (state.isFullscreen) {
     elements.btnFullscreen.textContent = '✕ Tutup Layar';
     elements.btnFullscreen.classList.add('active');
-    if (panel.requestFullscreen) {
-      panel.requestFullscreen().catch(() => {});
-    }
   } else {
     elements.btnFullscreen.textContent = '⛶ Fullscreen';
     elements.btnFullscreen.classList.remove('active');
-    if (document.fullscreenElement && document.exitFullscreen) {
-      document.exitFullscreen().catch(() => {});
-    }
   }
 
-  setTimeout(() => {
+  // Force chart to resize cleanly to new bounds
+  handleChartResize();
+  requestAnimationFrame(() => {
     handleChartResize();
     if (state.tvChart) {
       state.tvChart.timeScale().fitContent();
     }
-  }, 120);
+  });
 }
 
-// Synchronize ESC key with Fullscreen state
-document.addEventListener('fullscreenchange', () => {
-  if (!document.fullscreenElement && state.isFullscreen) {
-    state.isFullscreen = false;
-    elements.chartPanel.classList.remove('fullscreen-active');
-    elements.btnFullscreen.textContent = '⛶ Fullscreen';
-    elements.btnFullscreen.classList.remove('active');
-    setTimeout(() => {
-      handleChartResize();
-      if (state.tvChart) state.tvChart.timeScale().fitContent();
-    }, 120);
+// Global Escape Key to exit fullscreen cleanly
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && state.isFullscreen) {
+    toggleFullscreen();
   }
 });
 
