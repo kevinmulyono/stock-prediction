@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AI Stock Movement Prediction & Trading Strategy Dashboard for IDX Bluechip Stocks (BBCA, BBRI, BMRI, TLKM, ASII). Track C by Ali.">
+  <title>IDX AI Stock Trader & Prediction Dashboard</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- ApexCharts CDN for Financial Candlesticks and Visualizations -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- ================= NAVBAR ================= -->
+  <header class="navbar" id="navbar">
+    <div class="brand-section">
+      <div class="brand-logo">AI</div>
+      <div class="brand-text">
+        <h1>IDX AI Stock Trader</h1>
+        <div class="brand-subtitle">
+          <span>T+1 Movement Prediction & Trading Signals</span>
+          <span class="status-indicator" id="apiStatusBadge">
+            <span class="status-dot"></span>
+            <span id="apiStatusText">Live API Active</span>
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-actions">
+      <!-- Model Selector -->
+      <div class="model-selector-wrapper">
+        <label for="modelSelect" class="model-selector-label">Model:</label>
+        <select id="modelSelect" class="model-select">
+          <option value="ensemble" selected>Ensemble (Track B - Top Pick)</option>
+          <option value="lstm">LSTM / GRU (Deep Learning)</option>
+          <option value="lightgbm">LightGBM (Gradient Boosting)</option>
+          <option value="logistic_regression">Logistic Regression (Track A)</option>
+          <option value="xgboost">XGBoost (Track A)</option>
+          <option value="random_forest">Random Forest (Track A)</option>
+        </select>
+      </div>
+
+      <!-- Trigger Daily Prediction Button -->
+      <button id="btnTriggerDaily" class="btn-trigger" title="Jalankan inferensi live harian untuk menghasilkan sinyal besok">
+        <span class="spin-icon">🔄</span>
+        <span>Live Daily Scoring</span>
+      </button>
+
+      <!-- Architecture & Info Button -->
+      <button id="btnOpenModelInfo" class="btn-ghost" title="Lihat Bobot Ensemble & 29 Indikator Teknikal">
+        <span>ℹ️ Model Specs</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="main-container" id="mainContainer">
+
+    <!-- ================= TOP TICKER STRIP ================= -->
+    <section class="ticker-strip-section">
+      <div class="ticker-strip-header">
+        <h2 class="section-title">
+          <span>🏛️ Universe IDX Bluechips (T+1 Signals)</span>
+          <span class="section-badge" id="targetDateBadge">Target: Loading...</span>
+        </h2>
+        <span style="font-size: 0.78rem; color: var(--text-secondary);">
+          Klik kartu emiten untuk melihat grafik candlestick & histori sinyal
+        </span>
+      </div>
+
+      <div class="ticker-strip" id="tickerStripContainer">
+        <!-- Rendered dynamically by JS -->
+        <div class="ticker-card skeleton">Memuat data emiten...</div>
+      </div>
+    </section>
+
+    <!-- ================= WORKSPACE (CHART + SIGNAL SIDEBAR) ================= -->
+    <section class="workspace-grid">
+
+      <!-- LEFT: CANDLESTICK & VOLUME CHART -->
+      <div class="chart-panel">
+        <div class="chart-panel-header">
+          <div class="active-stock-meta">
+            <h2 class="active-stock-title" id="chartTickerSymbol">BBCA.JK</h2>
+            <span class="active-stock-company" id="chartCompanyName">Bank Central Asia Tbk</span>
+            <span class="ticker-price" id="chartLatestPrice" style="font-size: 1.1rem; margin-left: 0.5rem;">Rp 0</span>
+          </div>
+
+          <div class="chart-controls">
+            <!-- Timeframe selector -->
+            <div class="timeframe-group" id="timeframeGroup">
+              <button class="tf-btn" data-tf="1M">1M</button>
+              <button class="tf-btn" data-tf="3M">3M</button>
+              <button class="tf-btn" data-tf="6M">6M</button>
+              <button class="tf-btn active" data-tf="1Y">1Y</button>
+              <button class="tf-btn" data-tf="ALL">ALL</button>
+            </div>
+
+            <!-- Signal overlay toggle -->
+            <label class="overlay-toggle" title="Tampilkan panah sinyal BUY / SELL di grafik harga">
+              <input type="checkbox" id="toggleSignalsOverlay" checked>
+              <span>Signal Overlay</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- ApexCharts container -->
+        <div class="chart-wrapper" id="candlestickChartContainer">
+          <div style="display:flex; justify-content:center; align-items:center; height:380px; color:var(--text-muted);">
+            Menyiapkan grafik harga interaktif...
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: SIGNAL DETAIL & REASONING -->
+      <aside class="signal-sidebar">
+        <!-- Active Signal Detail Card -->
+        <div class="card-widget" id="activeSignalWidget">
+          <div class="widget-title">
+            <span>Rekomendasi Trading AI</span>
+            <span id="widgetModelBadge" style="font-size: 0.72rem; color: var(--primary-light);">Ensemble</span>
+          </div>
+
+          <div class="signal-banner buy" id="signalBanner">
+            <div class="signal-banner-icon" id="signalBannerIcon">🟢</div>
+            <div>
+              <div class="signal-banner-action" id="signalBannerAction">BUY</div>
+              <div class="signal-banner-desc" id="signalBannerTargetDate">Target: Besok</div>
+            </div>
+          </div>
+
+          <div class="prob-meter-container" style="border: none; margin-top: 0; padding-top: 0;">
+            <div class="prob-meter-label">
+              <span>Probabilitas Kenaikan P(Up)</span>
+              <strong id="sidebarProbUp" style="color: var(--text-white);">65.2%</strong>
+            </div>
+            <div class="prob-meter-bar" style="height: 8px;">
+              <div class="prob-meter-fill bull" id="sidebarProbBar" style="width: 65%;"></div>
+            </div>
+          </div>
+
+          <div style="margin-top: 1rem; font-size: 0.8rem; color: var(--text-secondary); background: rgba(0,0,0,0.2); padding: 0.75rem; border-radius: var(--radius-sm); border-left: 3px solid var(--primary);" id="sidebarRecommendationText">
+            Model merekomendasikan Buka Posisi Beli.
+          </div>
+
+          <div class="metric-rows" style="margin-top: 1rem;">
+            <div class="metric-row">
+              <span>Ambang Batas Beli</span>
+              <span>P(Up) ≥ 53.0%</span>
+            </div>
+            <div class="metric-row">
+              <span>Ambang Batas Jual</span>
+              <span>P(Up) ≤ 47.0%</span>
+            </div>
+            <div class="metric-row">
+              <span>Biaya Transaksi IDX</span>
+              <span>0.15% per trade</span>
+            </div>
+            <div class="metric-row">
+              <span>Aturan Eksekusi</span>
+              <span>Next Day Open (T+1)</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Project Benchmark Summary Card -->
+        <div class="card-widget">
+          <div class="widget-title">
+            <span>Pembuktian Alpha</span>
+            <span style="color: var(--bull-green-light); font-weight: 700;">+22.62% Alpha</span>
+          </div>
+          <div style="font-size: 0.78rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            Perbandingan kinerja strategi Ensemble vs Beli & Diamkan (Buy & Hold) pada periode uji out-of-sample:
+          </div>
+          <div class="metric-rows">
+            <div class="metric-row">
+              <span>Ensemble Strategy Return</span>
+              <span class="return-positive">+22.22%</span>
+            </div>
+            <div class="metric-row">
+              <span>Buy & Hold (Benchmark)</span>
+              <span class="return-negative">-0.40%</span>
+            </div>
+            <div class="metric-row">
+              <span>Max Drawdown Proteksi</span>
+              <span style="color: var(--primary-light);">-7.86% vs -31.09%</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </section>
+
+    <!-- ================= LEADERBOARD & PERFORMANCE SECTION ================= -->
+    <section class="leaderboard-panel">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+        <div>
+          <h2 class="section-title">🏆 Strategy Leaderboard (Out-of-Sample Test Set)</h2>
+          <p style="font-size: 0.78rem; color: var(--text-secondary); margin-top: 0.2rem;">
+            Hasil simulasi perdagangan harian realistis memperhitungkan komisi broker IDX 0.15% per transaksi.
+          </p>
+        </div>
+        <div class="section-badge" style="background: rgba(16, 185, 129, 0.15); color: var(--bull-green-light); border-color: rgba(16, 185, 129, 0.3);">
+          ⭐ Winner: Ensemble (Track B)
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="fin-table" id="leaderboardTable">
+          <thead>
+            <tr>
+              <th>Model / Strategi</th>
+              <th>Total Return (%)</th>
+              <th>Excess Return vs Market</th>
+              <th>Sharpe Ratio</th>
+              <th>Max Drawdown (%)</th>
+              <th>Win Rate (%)</th>
+              <th>Total Trades</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardTableBody">
+            <!-- Dynamically populated -->
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ================= MODEL EVALUATION & ML METRICS ================= -->
+    <section class="analytics-grid">
+      <!-- ML Statistical Accuracy Comparison -->
+      <div class="card-widget">
+        <div class="widget-title">
+          <span>📊 Evaluasi Statistik Model ML</span>
+          <span style="font-size: 0.75rem; color: var(--text-muted);">AUC / Brier / Acc</span>
+        </div>
+        <div class="table-responsive" style="margin-top: 0.5rem;">
+          <table class="fin-table" id="mlMetricsTable">
+            <thead>
+              <tr>
+                <th>Model</th>
+                <th>ROC-AUC</th>
+                <th>Akurasi (%)</th>
+                <th>Brier Score</th>
+                <th>Precision (%)</th>
+              </tr>
+            </thead>
+            <tbody id="mlMetricsTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Strategy Comparison Bar Chart -->
+      <div class="card-widget">
+        <div class="widget-title">
+          <span>📈 Perbandingan Total Return (%) Semua Model</span>
+        </div>
+        <div id="strategyComparisonChart" style="min-height: 250px;">
+          <!-- Rendered by ApexCharts -->
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ================= ARCHITECTURE & MODEL INFO MODAL ================= -->
+  <div class="modal-backdrop" id="modelInfoModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">⚙️ Spesifikasi Model & Pipeline Feature Engineering</h3>
+        <button class="modal-close" id="btnCloseModal">&times;</button>
+      </div>
+      <div>
+        <h4 style="font-family: var(--font-heading); font-size: 0.95rem; margin-bottom: 0.5rem; color: var(--primary-light);">
+          Bobot Kombinasi Weighted Ensemble
+        </h4>
+        <div class="metric-rows" style="margin-bottom: 1.25rem;">
+          <div class="metric-row">
+            <span>PyTorch LSTM / GRU (Deep Learning)</span>
+            <span style="color: var(--accent-cyan);">85% (0.85)</span>
+          </div>
+          <div class="metric-row">
+            <span>LightGBM (Gradient Boosted Trees)</span>
+            <span style="color: var(--primary-light);">15% (0.15)</span>
+          </div>
+          <div class="metric-row">
+            <span>Metode Tuning Bobot</span>
+            <span>Grid Search Optimal pada Validation Set 2024</span>
+          </div>
+        </div>
+
+        <h4 style="font-family: var(--font-heading); font-size: 0.95rem; margin-bottom: 0.5rem; color: var(--bull-green-light);">
+          29 Fitur Teknikal (Backward-Looking strictly No Lookahead Bias)
+        </h4>
+        <div class="indicators-tag-cloud" id="indicatorsTagCloud">
+          <!-- Dynamically populated -->
+        </div>
+
+        <h4 style="font-family: var(--font-heading); font-size: 0.95rem; margin-top: 1.25rem; margin-bottom: 0.5rem; color: var(--neutral-amber-light);">
+          Arsitektur Deep Learning LSTM
+        </h4>
+        <p style="font-size: 0.8rem; color: var(--text-secondary); line-height: 1.6;">
+          <code>StockLSTM(input_dim=29, hidden_dim=64, num_layers=2, dropout=0.2, LayerNorm)</code> dengan panjang sekuens waktu 15 hari bursa (Lookback=15). Dilatih dengan AdamW optimizer dan binary cross-entropy loss.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TOAST NOTIFICATIONS ================= -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Custom JavaScript Application -->
+  <script src="/static/js/app.js"></script>
+</body>
+</html>

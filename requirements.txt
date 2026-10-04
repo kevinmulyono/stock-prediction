@@ -26,3 +26,8 @@ torch>=2.0.0
 jupyter>=1.0.0
 ipykernel>=6.25.0
 
+# API & Web Service (Track C - Ali)
+fastapi>=0.110.0
+uvicorn[standard]>=0.28.0
+pydantic>=2.0.0
+
