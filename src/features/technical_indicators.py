@@ -303,7 +303,9 @@ if __name__ == "__main__":
     df_raw = pd.read_csv(args.input_file)
     featured_df = extract_features(df_raw, drop_warmup=True)
     
-    os.makedirs(os.path.dirname(args.output_file), exist_ok=True)
+    output_dir = os.path.dirname(args.output_file)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
     featured_df.to_csv(args.output_file, index=False)
     logger.info(f"Advanced featured dataset saved successfully to {args.output_file} ({len(featured_df)} rows).")
     

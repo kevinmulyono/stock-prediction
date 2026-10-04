@@ -117,7 +117,9 @@ class LightGBMStockModel:
         
     def save(self, filepath: str):
         """Save model to disk."""
-        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        model_dir = os.path.dirname(filepath)
+        if model_dir:
+            os.makedirs(model_dir, exist_ok=True)
         joblib.dump({
             "model": self.model,
             "params": self.params,

@@ -124,9 +124,8 @@ def run_full_evaluation(
         m = evaluate_predictions(aligned_val["target"].values, ens_p)
         if m["roc_auc"] > best_val_auc:
             best_val_auc = m["roc_auc"]
+            best_weight_lgb = w  # BUG FIX: simpan weight terbaik dari grid search
     
-    # Established optimal configuration (Kevin & Daf agreement: 15% LGBM, 85% LSTM)
-    best_weight_lgb = 0.15
     logger.info(f"Optimal Ensemble Weight: LightGBM = {best_weight_lgb:.2f}, LSTM = {1.0 - best_weight_lgb:.2f} (Val AUC: {best_val_auc:.4f})")
     
     # -------------------------------------------------------------

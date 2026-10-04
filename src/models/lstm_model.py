@@ -333,7 +333,9 @@ class LSTMStockTrainer:
 
     def save(self, model_path: str, scaler_path: str):
         """Saves model weights and scaler."""
-        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+        model_dir = os.path.dirname(model_path)
+        if model_dir:
+            os.makedirs(model_dir, exist_ok=True)
         torch.save(self.model.state_dict(), model_path)
         joblib.dump(self.scaler, scaler_path)
         logger.info(f"Saved LSTM model to {model_path} and Scaler to {scaler_path}")

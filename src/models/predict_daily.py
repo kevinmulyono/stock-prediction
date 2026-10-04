@@ -299,6 +299,11 @@ def run_daily_prediction(
         pred_output = predictor.predict_ticker(ticker_data, model_type=model)
         
         ticker_as_of = pred_output["as_of_date"]
+        # Pastikan ticker_as_of adalah tipe `date`, bukan string
+        if isinstance(ticker_as_of, str):
+            ticker_as_of = datetime.strptime(ticker_as_of, "%Y-%m-%d").date()
+        elif hasattr(ticker_as_of, 'date'):  # datetime object
+            ticker_as_of = ticker_as_of.date()
         if target_date_str:
             t_plus_1 = datetime.strptime(target_date_str, "%Y-%m-%d").date()
         else:
