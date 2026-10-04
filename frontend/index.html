@@ -11,7 +11,11 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 
-  <!-- ApexCharts CDN for Financial Candlesticks and Visualizations -->
+  <!-- TradingView Lightweight Charts for High-Performance Stockbit/Investing-style Charting -->
+  <script src="/static/js/lightweight-charts.standalone.production.js"></script>
+  <script>window.LightweightCharts || document.write('<script src="https://cdn.jsdelivr.net/npm/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"><\\/script>')</script>
+
+  <!-- ApexCharts CDN for Strategy Analytics Bar Chart -->
   <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
   <!-- Custom CSS -->
@@ -86,38 +90,80 @@
     <!-- ================= WORKSPACE (CHART + SIGNAL SIDEBAR) ================= -->
     <section class="workspace-grid">
 
-      <!-- LEFT: CANDLESTICK & VOLUME CHART -->
-      <div class="chart-panel">
+      <!-- LEFT: CANDLESTICK & VOLUME CHART (STOCKBIT / TRADINGVIEW STYLE) -->
+      <div class="chart-panel" id="chartPanel">
+        <!-- Top Horizon & Mode Explainer -->
+        <div class="chart-horizon-banner">
+          <div class="horizon-badge">
+            <span class="horizon-dot"></span>
+            <strong>Horizon Prediksi Model:</strong> <span>T+1 (1 Hari Bursa ke Depan)</span>
+          </div>
+          <div class="horizon-hint">
+            Rentang tombol <strong>[1M - ALL]</strong> di bawah adalah rentang histori lilin pada layar grafik.
+          </div>
+        </div>
+
         <div class="chart-panel-header">
           <div class="active-stock-meta">
-            <h2 class="active-stock-title" id="chartTickerSymbol">BBCA.JK</h2>
-            <span class="active-stock-company" id="chartCompanyName">Bank Central Asia Tbk</span>
-            <span class="ticker-price" id="chartLatestPrice" style="font-size: 1.1rem; margin-left: 0.5rem;">Rp 0</span>
+            <div style="display:flex; align-items:baseline; gap:0.6rem;">
+              <h2 class="active-stock-title" id="chartTickerSymbol">BBCA.JK</h2>
+              <span class="active-stock-company" id="chartCompanyName">Bank Central Asia Tbk</span>
+            </div>
+            <span class="ticker-price" id="chartLatestPrice">Rp 0</span>
           </div>
 
           <div class="chart-controls">
             <!-- Timeframe selector -->
-            <div class="timeframe-group" id="timeframeGroup">
-              <button class="tf-btn" data-tf="1M">1M</button>
-              <button class="tf-btn" data-tf="3M">3M</button>
-              <button class="tf-btn" data-tf="6M">6M</button>
-              <button class="tf-btn active" data-tf="1Y">1Y</button>
-              <button class="tf-btn" data-tf="ALL">ALL</button>
+            <div class="control-unit">
+              <span class="control-label">Histori:</span>
+              <div class="timeframe-group" id="timeframeGroup">
+                <button class="tf-btn" data-tf="1M" title="1 Bulan Terakhir">1M</button>
+                <button class="tf-btn" data-tf="3M" title="3 Bulan Terakhir">3M</button>
+                <button class="tf-btn active" data-tf="6M" title="6 Bulan Terakhir (Rekomendasi)">6M</button>
+                <button class="tf-btn" data-tf="1Y" title="1 Tahun Terakhir (Termasuk Out-of-Sample Test)">1Y</button>
+                <button class="tf-btn" data-tf="ALL" title="Seluruh Histori dari 2018">ALL</button>
+              </div>
             </div>
 
-            <!-- Signal overlay toggle -->
-            <label class="overlay-toggle" title="Tampilkan panah sinyal BUY / SELL di grafik harga">
-              <input type="checkbox" id="toggleSignalsOverlay" checked>
-              <span>Signal Overlay</span>
-            </label>
+            <!-- Signal overlay mode selector -->
+            <div class="control-unit">
+              <span class="control-label">Sinyal:</span>
+              <select id="signalOverlayMode" class="signal-mode-select" title="Pilih mode visualisasi sinyal AI">
+                <option value="entries" selected>🎯 Titik Eksekusi (Rapi)</option>
+                <option value="all">📊 Semua Sinyal Harian</option>
+                <option value="off">🚫 Matikan Sinyal</option>
+              </select>
+            </div>
+
+            <!-- Fullscreen & Reset Zoom buttons -->
+            <div class="chart-actions-group">
+              <button id="btnResetZoom" class="chart-action-btn" title="Reset Zoom ke Tampilan Optimal">↺ Reset</button>
+              <button id="btnFullscreen" class="chart-action-btn primary" title="Buka Chart Layar Penuh">⛶ Fullscreen</button>
+            </div>
           </div>
         </div>
 
-        <!-- ApexCharts container -->
-        <div class="chart-wrapper" id="candlestickChartContainer">
-          <div style="display:flex; justify-content:center; align-items:center; height:380px; color:var(--text-muted);">
-            Menyiapkan grafik harga interaktif...
+        <!-- TradingView-style Interactive Dynamic Legend -->
+        <div class="tradingview-legend" id="chartLegendBar">
+          <div class="legend-stock-title" id="legendStockTitle">BBCA.JK · D · IDX</div>
+          <div class="legend-values" id="legendValues">
+            <span>O: <strong id="legendOpen">--</strong></span>
+            <span>H: <strong id="legendHigh">--</strong></span>
+            <span>L: <strong id="legendLow">--</strong></span>
+            <span>C: <strong id="legendClose">--</strong></span>
+            <span id="legendChangeWrapper">Chg: <strong id="legendChange">--</strong></span>
+            <span>Vol: <strong id="legendVolume">--</strong></span>
           </div>
+        </div>
+
+        <!-- TradingView Lightweight Charts Canvas Container -->
+        <div class="chart-wrapper" id="candlestickChartContainer">
+          <!-- Lightweight Charts canvas is mounted here -->
+        </div>
+
+        <!-- Navigation Pro-Tips (Stockbit/TradingView UX) -->
+        <div class="chart-nav-help">
+          <span>💡 <strong>Tips Navigasi:</strong> Scroll mouse untuk Zoom · Klik & drag grafik untuk geser waktu · Drag sumbu harga (kanan) untuk skala vertikal.</span>
         </div>
       </div>
 

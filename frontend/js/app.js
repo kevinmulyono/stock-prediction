@@ -1,19 +1,25 @@
 /**
  * IDX AI Stock Trader Dashboard (Track C - Ali)
- * Frontend Application Logic & ApexCharts Integration
+ * Frontend Application Logic with TradingView Lightweight Charts
+ * Stockbit / Investing.com Experience with Smart Signal Filtering & Fullscreen
  */
 
 // Global State
 const state = {
   selectedModel: 'ensemble',
   selectedTicker: 'BBCA.JK',
-  selectedTimeframe: '1Y',
-  showSignalsOverlay: true,
+  selectedTimeframe: '6M', // Default to 6M for wide, readable candles like Stockbit
+  signalOverlayMode: 'entries', // 'entries' | 'all' | 'off'
+  isFullscreen: false,
   stocks: [],
   latestPredictions: {},
   activePrediction: null,
-  candlestickChart: null,
-  comparisonChart: null,
+  rawHistoryData: [],
+  rawSignalsData: [],
+  tvChart: null,
+  candleSeries: null,
+  volumeSeries: null,
+  comparisonChart: null, // ApexCharts for strategy return bar comparison
   modelRegistry: null
 };
 
@@ -29,11 +35,22 @@ const elements = {
   indicatorsTagCloud: document.getElementById('indicatorsTagCloud'),
   targetDateBadge: document.getElementById('targetDateBadge'),
   tickerStripContainer: document.getElementById('tickerStripContainer'),
+  chartPanel: document.getElementById('chartPanel'),
   chartTickerSymbol: document.getElementById('chartTickerSymbol'),
   chartCompanyName: document.getElementById('chartCompanyName'),
   chartLatestPrice: document.getElementById('chartLatestPrice'),
   timeframeGroup: document.getElementById('timeframeGroup'),
-  toggleSignalsOverlay: document.getElementById('toggleSignalsOverlay'),
+  signalOverlayMode: document.getElementById('signalOverlayMode'),
+  btnFullscreen: document.getElementById('btnFullscreen'),
+  btnResetZoom: document.getElementById('btnResetZoom'),
+  chartLegendBar: document.getElementById('chartLegendBar'),
+  legendStockTitle: document.getElementById('legendStockTitle'),
+  legendOpen: document.getElementById('legendOpen'),
+  legendHigh: document.getElementById('legendHigh'),
+  legendLow: document.getElementById('legendLow'),
+  legendClose: document.getElementById('legendClose'),
+  legendChange: document.getElementById('legendChange'),
+  legendVolume: document.getElementById('legendVolume'),
   candlestickChartContainer: document.getElementById('candlestickChartContainer'),
   widgetModelBadge: document.getElementById('widgetModelBadge'),
   signalBanner: document.getElementById('signalBanner'),
@@ -53,6 +70,15 @@ const elements = {
 function formatIDR(value) {
   if (value === null || value === undefined) return 'Rp -';
   return 'Rp ' + Number(value).toLocaleString('id-ID', { maximumFractionDigits: 0 });
+}
+
+function formatVolume(val) {
+  if (!val || val === 0) return '0';
+  const num = Number(val);
+  if (num >= 1e9) return (num / 1e9).toFixed(2) + 'B';
+  if (num >= 1e6) return (num / 1e6).toFixed(2) + 'M';
+  if (num >= 1e3) return (num / 1e3).toFixed(1) + 'K';
+  return num.toLocaleString('id-ID');
 }
 
 function showToast(message, type = 'success') {
@@ -114,7 +140,322 @@ const api = {
   }
 };
 
-// UI Renderers
+// ===================================================================
+// TRADINGVIEW LIGHTWEIGHT CHARTS ENGINE (STOCKBIT / INVESTING.COM UX)
+// ===================================================================
+
+function initTradingViewChart() {
+  if (typeof LightweightCharts === 'undefined') {
+    console.error('TradingView LightweightCharts library not loaded.');
+    return;
+  }
+
+  const container = elements.candlestickChartContainer;
+  container.innerHTML = '';
+
+  const chartOptions = {
+    layout: {
+      textColor: '#94a3b8',
+      background: { type: 'solid', color: '#0a0e17' },
+      fontFamily: 'Inter, -apple-system, BlinkMacSystemFont, sans-serif',
+      fontSize: 11
+    },
+    grid: {
+      vertLines: { color: 'rgba(255, 255, 255, 0.04)' },
+      horzLines: { color: 'rgba(255, 255, 255, 0.04)' }
+    },
+    crosshair: {
+      mode: LightweightCharts.CrosshairMode.Normal,
+      vertLine: {
+        width: 1,
+        color: 'rgba(99, 102, 241, 0.5)',
+        style: LightweightCharts.LineStyle.Dashed,
+        labelBackgroundColor: '#6366f1'
+      },
+      horzLine: {
+        width: 1,
+        color: 'rgba(99, 102, 241, 0.5)',
+        style: LightweightCharts.LineStyle.Dashed,
+        labelBackgroundColor: '#6366f1'
+      }
+    },
+    rightPriceScale: {
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      scaleMargins: {
+        top: 0.1,
+        bottom: 0.22 // Leaves 22% space at bottom for volume bars
+      },
+      autoScale: true
+    },
+    timeScale: {
+      borderColor: 'rgba(255, 255, 255, 0.08)',
+      timeVisible: true,
+      secondsVisible: false,
+      rightOffset: 6,
+      barSpacing: 8,
+      minBarSpacing: 3
+    },
+    handleScroll: {
+      mouseWheel: true,
+      pressedMouseMove: true,
+      horzTouchDrag: true,
+      vertTouchDrag: true
+    },
+    handleScale: {
+      axisPressedMouseMove: true,
+      mouseWheel: true,
+      pinch: true
+    }
+  };
+
+  state.tvChart = LightweightCharts.createChart(container, chartOptions);
+
+  // Candlestick Series (Bullish Green / Bearish Red)
+  state.candleSeries = state.tvChart.addCandlestickSeries({
+    upColor: '#10b981',
+    downColor: '#f43f5e',
+    borderVisible: false,
+    wickUpColor: '#10b981',
+    wickDownColor: '#f43f5e',
+    priceFormat: {
+      type: 'price',
+      precision: 0,
+      minMove: 1
+    }
+  });
+
+  // Volume Histogram Series (Stockbit style overlay)
+  state.volumeSeries = state.tvChart.addHistogramSeries({
+    priceFormat: { type: 'volume' },
+    priceScaleId: '', // Overlay inside same chart area
+    scaleMargins: {
+      top: 0.8,
+      bottom: 0
+    }
+  });
+
+  // Subscribe Crosshair for Dynamic Stockbit/TradingView OHLCV Legend
+  state.tvChart.subscribeCrosshairMove(param => {
+    updateDynamicLegend(param);
+  });
+
+  // Auto-resize on window resize
+  window.addEventListener('resize', handleChartResize);
+}
+
+function handleChartResize() {
+  if (state.tvChart && elements.candlestickChartContainer) {
+    const width = elements.candlestickChartContainer.clientWidth;
+    const height = elements.candlestickChartContainer.clientHeight;
+    state.tvChart.applyOptions({ width, height });
+  }
+}
+
+function updateDynamicLegend(param) {
+  elements.legendStockTitle.textContent = `${state.selectedTicker} · 1D · IDX`;
+
+  let candle = null;
+  let volume = null;
+
+  if (param && param.time && state.candleSeries) {
+    candle = param.seriesData.get(state.candleSeries);
+    if (state.volumeSeries) {
+      volume = param.seriesData.get(state.volumeSeries);
+    }
+  }
+
+  // Fallback to latest available historical candle if cursor is outside chart
+  if (!candle && state.rawHistoryData && state.rawHistoryData.length > 0) {
+    const last = state.rawHistoryData[state.rawHistoryData.length - 1];
+    candle = {
+      open: last.open,
+      high: last.high,
+      low: last.low,
+      close: last.close
+    };
+    volume = { value: last.volume };
+  }
+
+  if (candle) {
+    elements.legendOpen.textContent = Number(candle.open).toLocaleString('id-ID');
+    elements.legendHigh.textContent = Number(candle.high).toLocaleString('id-ID');
+    elements.legendLow.textContent = Number(candle.low).toLocaleString('id-ID');
+    elements.legendClose.textContent = Number(candle.close).toLocaleString('id-ID');
+
+    const chgVal = candle.close - candle.open;
+    const chgPct = candle.open > 0 ? (chgVal / candle.open) * 100 : 0;
+    const sign = chgPct >= 0 ? '+' : '';
+    const chgText = `${sign}${chgPct.toFixed(2)}% (${sign}${Number(chgVal).toLocaleString('id-ID')})`;
+
+    elements.legendChange.textContent = chgText;
+    elements.legendChange.className = chgPct >= 0 ? 'chg-up' : 'chg-down';
+
+    if (volume && volume.value) {
+      elements.legendVolume.textContent = formatVolume(volume.value);
+    } else {
+      elements.legendVolume.textContent = '--';
+    }
+  }
+}
+
+/**
+ * Smart Signal Filtering:
+ * Solves the issue where 100+ daily signals overlap into a solid block of red/green.
+ * - 'entries': Filters consecutive duplicate signals so only genuine Trade Entries (BUY)
+ *   and Position Closures (SELL) are marked with crisp native arrows!
+ * - 'all': Shows small discrete markers on all signal days without overlapping text.
+ * - 'off': Clears all markers for a clean pure candlestick view.
+ */
+function applySignalsMarkers(signalsList) {
+  if (!state.candleSeries) return;
+
+  if (state.signalOverlayMode === 'off' || !signalsList || signalsList.length === 0) {
+    state.candleSeries.setMarkers([]);
+    return;
+  }
+
+  const sorted = [...signalsList].sort((a, b) => new Date(a.date) - new Date(b.date));
+  const markers = [];
+
+  if (state.signalOverlayMode === 'entries') {
+    let activePosition = null; // 'LONG' or null/'CASH'
+
+    sorted.forEach(s => {
+      if (s.signal === 'BUY' && activePosition !== 'LONG') {
+        // ENTRY BUY SIGNAL
+        markers.push({
+          time: s.date,
+          position: 'belowBar',
+          color: '#10b981',
+          shape: 'arrowUp',
+          text: `BUY (${s.probability_up.toFixed(0)}%)`
+        });
+        activePosition = 'LONG';
+      } else if (s.signal === 'SELL' && activePosition === 'LONG') {
+        // EXIT / SELL SIGNAL
+        markers.push({
+          time: s.date,
+          position: 'aboveBar',
+          color: '#f43f5e',
+          shape: 'arrowDown',
+          text: `SELL (${s.probability_up.toFixed(0)}%)`
+        });
+        activePosition = 'CASH';
+      }
+    });
+  } else if (state.signalOverlayMode === 'all') {
+    // Show discrete clean arrows for all days
+    sorted.forEach(s => {
+      const isBuy = s.signal === 'BUY';
+      markers.push({
+        time: s.date,
+        position: isBuy ? 'belowBar' : 'aboveBar',
+        color: isBuy ? '#10b981' : '#f43f5e',
+        shape: isBuy ? 'arrowUp' : 'arrowDown',
+        text: `${s.signal}`
+      });
+    });
+  }
+
+  state.candleSeries.setMarkers(markers);
+}
+
+async function renderTradingViewChart() {
+  if (!state.tvChart) {
+    initTradingViewChart();
+  }
+
+  try {
+    const [historyRes, signalsRes] = await Promise.all([
+      api.getStockHistory(state.selectedTicker, state.selectedTimeframe),
+      api.getSignalsOverlay(state.selectedTicker, state.selectedModel, state.selectedTimeframe)
+    ]);
+
+    state.rawHistoryData = historyRes.data || [];
+    state.rawSignalsData = signalsRes.data || [];
+
+    if (state.rawHistoryData.length === 0) {
+      return;
+    }
+
+    // Prepare Candlestick data for Lightweight Charts (format: { time: 'YYYY-MM-DD', open, high, low, close })
+    const candleData = state.rawHistoryData.map(item => ({
+      time: item.date,
+      open: item.open,
+      high: item.high,
+      low: item.low,
+      close: item.close
+    }));
+
+    // Prepare Volume data (format: { time: 'YYYY-MM-DD', value, color })
+    const volumeData = state.rawHistoryData.map(item => ({
+      time: item.date,
+      value: item.volume,
+      color: item.close >= item.open ? 'rgba(16, 185, 129, 0.35)' : 'rgba(244, 63, 94, 0.35)'
+    }));
+
+    state.candleSeries.setData(candleData);
+    state.volumeSeries.setData(volumeData);
+
+    // Apply Smart Clean Markers
+    applySignalsMarkers(state.rawSignalsData);
+
+    // Adjust chart fit
+    state.tvChart.timeScale().fitContent();
+
+    // Update legend with latest candle
+    updateDynamicLegend(null);
+  } catch (err) {
+    console.error('Error rendering Lightweight Chart:', err);
+    showToast(`Gagal memuat grafik: ${err.message}`, 'error');
+  }
+}
+
+function toggleFullscreen() {
+  const panel = elements.chartPanel;
+  state.isFullscreen = !state.isFullscreen;
+  panel.classList.toggle('fullscreen-active', state.isFullscreen);
+
+  if (state.isFullscreen) {
+    elements.btnFullscreen.textContent = '✕ Tutup Layar';
+    elements.btnFullscreen.classList.add('active');
+    if (panel.requestFullscreen) {
+      panel.requestFullscreen().catch(() => {});
+    }
+  } else {
+    elements.btnFullscreen.textContent = '⛶ Fullscreen';
+    elements.btnFullscreen.classList.remove('active');
+    if (document.fullscreenElement && document.exitFullscreen) {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  setTimeout(() => {
+    handleChartResize();
+    if (state.tvChart) {
+      state.tvChart.timeScale().fitContent();
+    }
+  }, 120);
+}
+
+// Synchronize ESC key with Fullscreen state
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && state.isFullscreen) {
+    state.isFullscreen = false;
+    elements.chartPanel.classList.remove('fullscreen-active');
+    elements.btnFullscreen.textContent = '⛶ Fullscreen';
+    elements.btnFullscreen.classList.remove('active');
+    setTimeout(() => {
+      handleChartResize();
+      if (state.tvChart) state.tvChart.timeScale().fitContent();
+    }, 120);
+  }
+});
+
+// ===================================================================
+// OTHER DASHBOARD COMPONENTS (TICKERS, SIDEBAR, LEADERBOARD)
+// ===================================================================
+
 function renderTickerStrip() {
   elements.tickerStripContainer.innerHTML = '';
 
@@ -199,167 +540,7 @@ function updateActiveSidebar() {
     else if (signal === 'SELL') meterClass = 'bear';
     elements.sidebarProbBar.className = `prob-meter-fill ${meterClass}`;
 
-    elements.sidebarRecommendationText.textContent = pred.recommendation || 'Model memantau volatilitas pasar.';
-  }
-}
-
-async function renderCandlestickChart() {
-  try {
-    const [historyRes, signalsRes] = await Promise.all([
-      api.getStockHistory(state.selectedTicker, state.selectedTimeframe),
-      state.showSignalsOverlay
-        ? api.getSignalsOverlay(state.selectedTicker, state.selectedModel, state.selectedTimeframe)
-        : Promise.resolve({ data: [] })
-    ]);
-
-    const candleSeriesData = historyRes.data.map(item => ({
-      x: new Date(item.date).getTime(),
-      y: [item.open, item.high, item.low, item.close]
-    }));
-
-    // Generate BUY/SELL annotations
-    const pointAnnotations = [];
-    if (state.showSignalsOverlay && signalsRes && signalsRes.data) {
-      signalsRes.data.forEach(s => {
-        const isBuy = s.signal === 'BUY';
-        pointAnnotations.push({
-          x: new Date(s.date).getTime(),
-          y: s.price,
-          marker: {
-            size: 5,
-            fillColor: isBuy ? '#10b981' : '#f43f5e',
-            strokeColor: '#ffffff',
-            strokeWidth: 1.5,
-            shape: 'circle'
-          },
-          label: {
-            borderColor: isBuy ? '#10b981' : '#f43f5e',
-            borderWidth: 1,
-            borderRadius: 4,
-            textAnchor: 'middle',
-            offsetY: isBuy ? -18 : 22,
-            style: {
-              background: isBuy ? 'rgba(16, 185, 129, 0.9)' : 'rgba(244, 63, 94, 0.9)',
-              color: '#ffffff',
-              fontSize: '9px',
-              fontFamily: 'Inter',
-              fontWeight: 700,
-              padding: { left: 4, right: 4, top: 2, bottom: 2 }
-            },
-            text: `${s.signal}`
-          }
-        });
-      });
-    }
-
-    const options = {
-      series: [
-        {
-          name: `${state.selectedTicker} Price`,
-          type: 'candlestick',
-          data: candleSeriesData
-        }
-      ],
-      chart: {
-        type: 'candlestick',
-        height: 380,
-        background: 'transparent',
-        toolbar: {
-          show: true,
-          tools: {
-            download: true,
-            selection: true,
-            zoom: true,
-            zoomin: true,
-            zoomout: true,
-            pan: true,
-            reset: true
-          }
-        },
-        animations: {
-          enabled: true,
-          easing: 'easeinout',
-          speed: 400
-        }
-      },
-      theme: {
-        mode: 'dark'
-      },
-      plotOptions: {
-        candlestick: {
-          colors: {
-            upward: '#10b981',
-            downward: '#f43f5e'
-          },
-          wick: {
-            useFillColor: true
-          }
-        }
-      },
-      xaxis: {
-        type: 'datetime',
-        labels: {
-          style: {
-            colors: '#94a3b8',
-            fontFamily: 'Inter',
-            fontSize: '11px'
-          },
-          datetimeFormatter: {
-            year: 'yyyy',
-            month: "MMM 'yy",
-            day: 'dd MMM'
-          }
-        },
-        axisBorder: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        },
-        axisTicks: {
-          color: 'rgba(255, 255, 255, 0.1)'
-        }
-      },
-      yaxis: {
-        tooltip: {
-          enabled: true
-        },
-        labels: {
-          style: {
-            colors: '#94a3b8',
-            fontFamily: 'JetBrains Mono',
-            fontSize: '11px'
-          },
-          formatter: (val) => Number(val).toLocaleString('id-ID')
-        }
-      },
-      grid: {
-        borderColor: 'rgba(255, 255, 255, 0.05)',
-        strokeDashArray: 3
-      },
-      tooltip: {
-        theme: 'dark',
-        shared: true,
-        x: {
-          format: 'dd MMM yyyy'
-        }
-      },
-      annotations: {
-        points: pointAnnotations
-      }
-    };
-
-    if (state.candlestickChart) {
-      state.candlestickChart.updateOptions(options);
-    } else {
-      elements.candlestickChartContainer.innerHTML = '';
-      state.candlestickChart = new ApexCharts(elements.candlestickChartContainer, options);
-      await state.candlestickChart.render();
-    }
-  } catch (err) {
-    console.error('Error rendering chart:', err);
-    elements.candlestickChartContainer.innerHTML = `
-      <div style="display:flex; justify-content:center; align-items:center; height:380px; color:var(--bear-red);">
-        Gagal memuat grafik harga: ${err.message}
-      </div>
-    `;
+    elements.sidebarRecommendationText.textContent = pred.recommendation || 'Model memantau pergerakan harga pasar.';
   }
 }
 
@@ -498,7 +679,7 @@ async function selectTicker(ticker) {
     else c.classList.remove('active');
   });
   updateActiveSidebar();
-  await renderCandlestickChart();
+  await renderTradingViewChart();
 }
 
 async function handleModelChange(newModel) {
@@ -516,7 +697,7 @@ async function handleModelChange(newModel) {
 
     renderTickerStrip();
     updateActiveSidebar();
-    await renderCandlestickChart();
+    await renderTradingViewChart();
     showToast(`Model berganti ke: ${newModel.toUpperCase()}`, 'success');
   } catch (err) {
     console.error('Failed to change model:', err);
@@ -566,7 +747,7 @@ async function refreshAllData() {
 
     renderTickerStrip();
     updateActiveSidebar();
-    await renderCandlestickChart();
+    await renderTradingViewChart();
     renderLeaderboardTable(backtestRes);
     renderStrategyComparisonChart(backtestRes);
     renderMLMetricsTable(mlRes);
@@ -589,20 +770,35 @@ function initEventListeners() {
     handleTriggerDaily();
   });
 
+  // Timeframe buttons (1M, 3M, 6M, 1Y, ALL)
   elements.timeframeGroup.querySelectorAll('.tf-btn').forEach(btn => {
     btn.addEventListener('click', async (e) => {
       elements.timeframeGroup.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.selectedTimeframe = btn.getAttribute('data-tf');
-      await renderCandlestickChart();
+      await renderTradingViewChart();
     });
   });
 
-  elements.toggleSignalsOverlay.addEventListener('change', async (e) => {
-    state.showSignalsOverlay = e.target.checked;
-    await renderCandlestickChart();
+  // Signal Overlay Mode Dropdown (Entries / All / Off)
+  elements.signalOverlayMode.addEventListener('change', (e) => {
+    state.signalOverlayMode = e.target.value;
+    applySignalsMarkers(state.rawSignalsData);
   });
 
+  // Fullscreen button
+  elements.btnFullscreen.addEventListener('click', () => {
+    toggleFullscreen();
+  });
+
+  // Reset Zoom button
+  elements.btnResetZoom.addEventListener('click', () => {
+    if (state.tvChart) {
+      state.tvChart.timeScale().fitContent();
+    }
+  });
+
+  // Modal open / close
   elements.btnOpenModelInfo.addEventListener('click', () => {
     elements.modelInfoModal.classList.add('open');
   });
