@@ -264,13 +264,22 @@ def run_daily_prediction(
     tickers: Optional[List[str]] = None,
     as_of_date_str: Optional[str] = None,
     target_date_str: Optional[str] = None,
-    save_to_db: bool = True
+    save_to_db: bool = True,
+    sync_live: bool = True
 ) -> pd.DataFrame:
     """
     Main orchestration routine for daily inference and T+1 scoring.
     """
     tickers = tickers or TARGET_TICKERS
     as_of_date = datetime.strptime(as_of_date_str, "%Y-%m-%d").date() if as_of_date_str else None
+
+    # 0. Sync missing live market candles from Yahoo Finance if running in live mode
+    if sync_live and as_of_date is None:
+        try:
+            from src.data.sync_daily import sync_market_data
+            sync_market_data(tickers)
+        except Exception as sync_err:
+            logger.warning(f"Live market data sync skipped/warning: {sync_err}")
     
     logger.info(f"=== Starting Daily Prediction Pipeline (Model: {model}) ===")
     
