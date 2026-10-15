@@ -1,0 +1,10 @@
+# The dashboard is a static frontend; locally it is served by FastAPI (src/api/main.py).
+[build]
+  publish = "frontend"
+  command = ""
+
+# index.html references assets under /static/ (FastAPI's mount point) — map them to frontend/
+[[redirects]]
+  from = "/static/*"
+  to = "/:splat"
+  status = 200
