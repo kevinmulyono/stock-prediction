@@ -44,6 +44,21 @@ app.include_router(stocks.router)
 app.include_router(predictions.router)
 app.include_router(analytics.router)
 
+@app.on_event("startup")
+def startup_db_check():
+    """Ensure schema exists and stocks metadata is seeded when running in cloud."""
+    try:
+        from src.database.connection import init_db, get_db_session
+        from src.database.models import Stock
+        from src.database.seed import seed_stocks
+        init_db()
+        with get_db_session() as session:
+            if session.query(Stock).count() == 0:
+                seed_stocks(session)
+    except Exception as e:
+        import logging
+        logging.getLogger("uvicorn").warning(f"Startup DB initialization notice: {e}")
+
 # Mount Frontend static assets and HTML UI
 FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
 if os.path.exists(FRONTEND_DIR):

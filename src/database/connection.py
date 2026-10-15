@@ -34,6 +34,9 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():
     """Create all tables in the database schema."""
+    db_dir = os.path.dirname(DEFAULT_DB_PATH)
+    if db_dir:
+        os.makedirs(db_dir, exist_ok=True)
     logger.info(f"Initializing database schema with engine: {engine.url.drivername}...")
     Base.metadata.create_all(bind=engine)
     logger.info("Database schema initialized successfully.")

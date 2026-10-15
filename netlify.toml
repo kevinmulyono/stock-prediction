@@ -1,0 +1,27 @@
+# ===================================================================
+# Netlify Configuration for IDX AI Stock Trader Dashboard
+# Frontend Static Hosting + API Proxy to FastAPI Cloud Backend
+# ===================================================================
+
+[build]
+  publish = "frontend"
+
+# Map /static/* assets to root files inside frontend directory
+[[redirects]]
+  from = "/static/*"
+  to = "/:splat"
+  status = 200
+
+# Proxy /api/* requests to FastAPI backend (Render / Railway)
+# Ganti URL di bawah dengan URL backend Render / Railway Anda setelah di-deploy
+[[redirects]]
+  from = "/api/*"
+  to = "https://YOUR_BACKEND_URL.onrender.com/api/:splat"
+  status = 200
+  force = true
+
+# Fallback for single page navigation
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
