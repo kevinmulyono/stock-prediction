@@ -1,0 +1,67 @@
+{
+  "latest_target_date": "2026-08-31",
+  "model": "lstm",
+  "count": 5,
+  "data": [
+    {
+      "ticker": "ASII.JK",
+      "company_name": "Astra International Tbk PT",
+      "target_date": "2026-08-31",
+      "model": "lstm",
+      "probability_up": 47.13,
+      "raw_probability": 0.47133,
+      "signal": "HOLD",
+      "prediction_label": "TURUN/FLAT",
+      "latest_close": 4760.0,
+      "recommendation": "Model netral / Tidak ada sinyal kuat (47.1%). Pertahankan posisi."
+    },
+    {
+      "ticker": "BBCA.JK",
+      "company_name": "Bank Central Asia Tbk PT",
+      "target_date": "2026-08-31",
+      "model": "lstm",
+      "probability_up": 43.93,
+      "raw_probability": 0.43929,
+      "signal": "SELL",
+      "prediction_label": "TURUN/FLAT",
+      "latest_close": 6025.0,
+      "recommendation": "Model merekomendasikan Jual / Amankan Kas (P(Naik) = 43.9% \u2264 47%)."
+    },
+    {
+      "ticker": "BBRI.JK",
+      "company_name": "Bank Rakyat Indonesia (Persero) Tbk PT",
+      "target_date": "2026-08-31",
+      "model": "lstm",
+      "probability_up": 38.9,
+      "raw_probability": 0.38895,
+      "signal": "SELL",
+      "prediction_label": "TURUN/FLAT",
+      "latest_close": 3090.0,
+      "recommendation": "Model merekomendasikan Jual / Amankan Kas (P(Naik) = 38.9% \u2264 47%)."
+    },
+    {
+      "ticker": "BMRI.JK",
+      "company_name": "Bank Mandiri (Persero) Tbk PT",
+      "target_date": "2026-08-31",
+      "model": "lstm",
+      "probability_up": 45.9,
+      "raw_probability": 0.45898,
+      "signal": "SELL",
+      "prediction_label": "TURUN/FLAT",
+      "latest_close": 3950.0,
+      "recommendation": "Model merekomendasikan Jual / Amankan Kas (P(Naik) = 45.9% \u2264 47%)."
+    },
+    {
+      "ticker": "TLKM.JK",
+      "company_name": "Telkom Indonesia (Persero) Tbk PT",
+      "target_date": "2026-08-31",
+      "model": "lstm",
+      "probability_up": 46.57,
+      "raw_probability": 0.46572,
+      "signal": "SELL",
+      "prediction_label": "TURUN/FLAT",
+      "latest_close": 2210.0,
+      "recommendation": "Model merekomendasikan Jual / Amankan Kas (P(Naik) = 46.6% \u2264 47%)."
+    }
+  ]
+}

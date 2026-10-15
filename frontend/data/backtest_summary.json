@@ -1,0 +1,86 @@
+{
+  "total_models": 7,
+  "benchmark": {
+    "model": "Buy & Hold (Benchmark)",
+    "total_return_pct": -0.4,
+    "excess_return_pct": 0.0,
+    "sharpe_ratio": 0.13,
+    "max_drawdown_pct": -31.09,
+    "win_rate_pct": 0.0,
+    "trades": 0
+  },
+  "winner": {
+    "model": "Ensemble (Track B)",
+    "total_return_pct": 22.22,
+    "excess_return_pct": 22.62,
+    "sharpe_ratio": 1.37,
+    "max_drawdown_pct": -7.86,
+    "win_rate_pct": 54.46,
+    "trades": 180
+  },
+  "data": [
+    {
+      "model": "Buy & Hold (Benchmark)",
+      "total_return_pct": -0.4,
+      "excess_return_pct": 0.0,
+      "sharpe_ratio": 0.13,
+      "max_drawdown_pct": -31.09,
+      "win_rate_pct": 0.0,
+      "trades": 0
+    },
+    {
+      "model": "Logistic Regression",
+      "total_return_pct": 18.25,
+      "excess_return_pct": 18.65,
+      "sharpe_ratio": 1.27,
+      "max_drawdown_pct": -6.4,
+      "win_rate_pct": 55.76,
+      "trades": 94
+    },
+    {
+      "model": "Random Forest",
+      "total_return_pct": 11.89,
+      "excess_return_pct": 12.29,
+      "sharpe_ratio": 1.14,
+      "max_drawdown_pct": -5.2,
+      "win_rate_pct": 48.8,
+      "trades": 116
+    },
+    {
+      "model": "XGBoost",
+      "total_return_pct": 14.7,
+      "excess_return_pct": 15.1,
+      "sharpe_ratio": 1.37,
+      "max_drawdown_pct": -5.01,
+      "win_rate_pct": 51.4,
+      "trades": 122
+    },
+    {
+      "model": "LightGBM",
+      "total_return_pct": 1.63,
+      "excess_return_pct": 2.03,
+      "sharpe_ratio": 0.26,
+      "max_drawdown_pct": -3.72,
+      "win_rate_pct": 61.54,
+      "trades": 72
+    },
+    {
+      "model": "LSTM/GRU",
+      "total_return_pct": 20.56,
+      "excess_return_pct": 20.96,
+      "sharpe_ratio": 1.22,
+      "max_drawdown_pct": -8.55,
+      "win_rate_pct": 52.74,
+      "trades": 200
+    },
+    {
+      "model": "Ensemble (Track B)",
+      "total_return_pct": 22.22,
+      "excess_return_pct": 22.62,
+      "sharpe_ratio": 1.37,
+      "max_drawdown_pct": -7.86,
+      "win_rate_pct": 54.46,
+      "trades": 180
+    }
+  ]
+}

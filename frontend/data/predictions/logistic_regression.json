@@ -1,0 +1,67 @@
+{
+  "latest_target_date": "2026-08-31",
+  "model": "logistic_regression",
+  "count": 5,
+  "data": [
+    {
+      "ticker": "ASII.JK",
+      "company_name": "Astra International Tbk PT",
+      "target_date": "2026-08-31",
+      "model": "logistic_regression",
+      "probability_up": 48.64,
+      "raw_probability": 0.4864,
+      "signal": "HOLD",
+      "prediction_label": "TURUN/FLAT",
+      "latest_close": 4760.0,
+      "recommendation": "Model netral / Tidak ada sinyal kuat (48.6%). Pertahankan posisi."
+    },
+    {
+      "ticker": "BBCA.JK",
+      "company_name": "Bank Central Asia Tbk PT",
+      "target_date": "2026-08-31",
+      "model": "logistic_regression",
+      "probability_up": 47.02,
+      "raw_probability": 0.47023,
+      "signal": "HOLD",
+      "prediction_label": "TURUN/FLAT",
+      "latest_close": 6025.0,
+      "recommendation": "Model netral / Tidak ada sinyal kuat (47.0%). Pertahankan posisi."
+    },
+    {
+      "ticker": "BBRI.JK",
+      "company_name": "Bank Rakyat Indonesia (Persero) Tbk PT",
+      "target_date": "2026-08-31",
+      "model": "logistic_regression",
+      "probability_up": 44.06,
+      "raw_probability": 0.44056,
+      "signal": "SELL",
+      "prediction_label": "TURUN/FLAT",
+      "latest_close": 3090.0,
+      "recommendation": "Model merekomendasikan Jual / Amankan Kas (P(Naik) = 44.1% \u2264 47%)."
+    },
+    {
+      "ticker": "BMRI.JK",
+      "company_name": "Bank Mandiri (Persero) Tbk PT",
+      "target_date": "2026-08-31",
+      "model": "logistic_regression",
+      "probability_up": 49.56,
+      "raw_probability": 0.49559,
+      "signal": "HOLD",
+      "prediction_label": "TURUN/FLAT",
+      "latest_close": 3950.0,
+      "recommendation": "Model netral / Tidak ada sinyal kuat (49.6%). Pertahankan posisi."
+    },
+    {
+      "ticker": "TLKM.JK",
+      "company_name": "Telkom Indonesia (Persero) Tbk PT",
+      "target_date": "2026-08-31",
+      "model": "logistic_regression",
+      "probability_up": 49.61,
+      "raw_probability": 0.49613,
+      "signal": "HOLD",
+      "prediction_label": "TURUN/FLAT",
+      "latest_close": 2210.0,
+      "recommendation": "Model netral / Tidak ada sinyal kuat (49.6%). Pertahankan posisi."
+    }
+  ]
+}

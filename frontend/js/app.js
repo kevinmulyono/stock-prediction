@@ -96,41 +96,153 @@ function showToast(message, type = 'success') {
   }, 4000);
 }
 
+// Dual-Mode Data Service (Live FastAPI with instant fallback to Static JSON)
+let isStaticMode = false;
+const historyCache = {};
+const signalsCache = {};
+
+async function fetchWithFallback(apiEndpoint, staticPath) {
+  if (!isStaticMode) {
+    try {
+      const res = await fetch(apiEndpoint);
+      if (res.ok) {
+        return await res.json();
+      }
+      // If 404 or server error, switch to static mode
+      isStaticMode = true;
+    } catch (e) {
+      isStaticMode = true;
+    }
+  }
+
+  // Load static JSON directly
+  const staticRes = await fetch(staticPath);
+  if (!staticRes.ok) {
+    throw new Error(`Gagal memuat data statis (${staticPath}): ${staticRes.statusText}`);
+  }
+  return await staticRes.json();
+}
+
+function filterByTimeframe(dataList, timeframe) {
+  if (!dataList || dataList.length === 0 || timeframe === 'ALL') {
+    return dataList || [];
+  }
+  const daysMap = { '1M': 30, '3M': 90, '6M': 180, '1Y': 365 };
+  const days = daysMap[timeframe] || 365;
+  const lastItem = dataList[dataList.length - 1];
+  const lastDate = new Date(lastItem.date);
+  const cutoff = new Date(lastDate);
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = cutoff.toISOString().split('T')[0];
+  return dataList.filter(item => item.date >= cutoffStr);
+}
+
 // API Service
 const api = {
   async getHealth() {
-    const res = await fetch('/api/health');
-    return await res.json();
+    try {
+      const data = await fetchWithFallback('/api/health', 'data/health.json');
+      if (isStaticMode || data.mode === 'static_netlify') {
+        elements.apiStatusText.textContent = 'Netlify Static (Auto-Sync)';
+        elements.apiStatusBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+      }
+      return data;
+    } catch (err) {
+      elements.apiStatusText.textContent = 'Offline';
+      throw err;
+    }
   },
+
   async getStocks() {
-    const res = await fetch('/api/stocks');
-    return await res.json();
+    return await fetchWithFallback('/api/stocks', 'data/stocks.json');
   },
+
   async getStockHistory(ticker, timeframe) {
-    const res = await fetch(`/api/stocks/${ticker}/history?timeframe=${timeframe}`);
-    return await res.json();
+    const normalizedTicker = ticker.endsWith('.JK') ? ticker : `${ticker}.JK`;
+    if (!isStaticMode) {
+      try {
+        const res = await fetch(`/api/stocks/${normalizedTicker}/history?timeframe=${timeframe}`);
+        if (res.ok) return await res.json();
+        isStaticMode = true;
+      } catch (e) {
+        isStaticMode = true;
+      }
+    }
+
+    // Static mode: cache full dataset and slice client-side
+    if (!historyCache[normalizedTicker]) {
+      const full = await fetchWithFallback(
+        `/api/stocks/${normalizedTicker}/history?timeframe=ALL`,
+        `data/history/${normalizedTicker}.json`
+      );
+      historyCache[normalizedTicker] = full.data || [];
+    }
+
+    const filtered = filterByTimeframe(historyCache[normalizedTicker], timeframe);
+    return {
+      ticker: normalizedTicker,
+      timeframe,
+      count: filtered.length,
+      data: filtered
+    };
   },
+
   async getLatestPredictions(model) {
-    const res = await fetch(`/api/predictions/latest?model=${model}`);
-    return await res.json();
+    return await fetchWithFallback(
+      `/api/predictions/latest?model=${model}`,
+      `data/predictions/${model}.json`
+    );
   },
+
   async getSignalsOverlay(ticker, model, timeframe) {
-    const res = await fetch(`/api/predictions/signals-overlay?ticker=${ticker}&model=${model}&timeframe=${timeframe}`);
-    return await res.json();
+    const normalizedTicker = ticker.endsWith('.JK') ? ticker : `${ticker}.JK`;
+    if (!isStaticMode) {
+      try {
+        const res = await fetch(`/api/predictions/signals-overlay?ticker=${normalizedTicker}&model=${model}&timeframe=${timeframe}`);
+        if (res.ok) return await res.json();
+        isStaticMode = true;
+      } catch (e) {
+        isStaticMode = true;
+      }
+    }
+
+    const cacheKey = `${normalizedTicker}_${model}`;
+    if (!signalsCache[cacheKey]) {
+      const full = await fetchWithFallback(
+        `/api/predictions/signals-overlay?ticker=${normalizedTicker}&model=${model}&timeframe=ALL`,
+        `data/signals/${normalizedTicker}_${model}.json`
+      );
+      signalsCache[cacheKey] = full.data || [];
+    }
+
+    const filtered = filterByTimeframe(signalsCache[cacheKey], timeframe);
+    return {
+      ticker: normalizedTicker,
+      model,
+      count: filtered.length,
+      data: filtered
+    };
   },
+
   async getBacktestSummary() {
-    const res = await fetch('/api/backtest/summary');
-    return await res.json();
+    return await fetchWithFallback('/api/backtest/summary', 'data/backtest_summary.json');
   },
+
   async getModelComparison() {
-    const res = await fetch('/api/models/comparison');
-    return await res.json();
+    return await fetchWithFallback('/api/models/comparison', 'data/model_comparison.json');
   },
+
   async getModelRegistry() {
-    const res = await fetch('/api/models/registry');
-    return await res.json();
+    return await fetchWithFallback('/api/models/registry', 'data/model_registry.json');
   },
+
   async triggerDailyPrediction(model) {
+    if (isStaticMode) {
+      return {
+        success: true,
+        message: 'ℹ️ Berjalan dalam Netlify Static Mode. Data dan prediksi diperbarui otomatis setiap hari bursa pukul 17:00 WIB via GitHub Actions.'
+      };
+    }
     const res = await fetch('/api/predictions/trigger-daily', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

@@ -1,6 +1,6 @@
 # ===================================================================
 # Netlify Configuration for IDX AI Stock Trader Dashboard
-# Frontend Static Hosting + API Proxy to FastAPI Cloud Backend
+# 100% Free JAMstack Static Hosting (No Backend Required)
 # ===================================================================
 
 [build]
@@ -12,13 +12,31 @@
   to = "/:splat"
   status = 200
 
-# Proxy /api/* requests to FastAPI backend (Render / Railway)
-# Ganti URL di bawah dengan URL backend Render / Railway Anda setelah di-deploy
+# Transparent API rewrites to static JSON files
 [[redirects]]
-  from = "/api/*"
-  to = "https://YOUR_BACKEND_URL.onrender.com/api/:splat"
+  from = "/api/health"
+  to = "/data/health.json"
   status = 200
-  force = true
+
+[[redirects]]
+  from = "/api/stocks"
+  to = "/data/stocks.json"
+  status = 200
+
+[[redirects]]
+  from = "/api/backtest/summary"
+  to = "/data/backtest_summary.json"
+  status = 200
+
+[[redirects]]
+  from = "/api/models/comparison"
+  to = "/data/model_comparison.json"
+  status = 200
+
+[[redirects]]
+  from = "/api/models/registry"
+  to = "/data/model_registry.json"
+  status = 200
 
 # Fallback for single page navigation
 [[redirects]]

@@ -1,0 +1,45 @@
+{
+  "total": 5,
+  "data": [
+    {
+      "ticker": "ASII.JK",
+      "company_name": "Astra International Tbk PT",
+      "sector": "Industrials & Conglomerate",
+      "latest_date": "2026-10-15",
+      "latest_close": 4760.0,
+      "change_pct": -1.04
+    },
+    {
+      "ticker": "BBCA.JK",
+      "company_name": "Bank Central Asia Tbk PT",
+      "sector": "Financials",
+      "latest_date": "2026-10-15",
+      "latest_close": 6025.0,
+      "change_pct": -1.63
+    },
+    {
+      "ticker": "BBRI.JK",
+      "company_name": "Bank Rakyat Indonesia (Persero) Tbk PT",
+      "sector": "Financials",
+      "latest_date": "2026-10-15",
+      "latest_close": 3090.0,
+      "change_pct": 0.0
+    },
+    {
+      "ticker": "BMRI.JK",
+      "company_name": "Bank Mandiri (Persero) Tbk PT",
+      "sector": "Financials",
+      "latest_date": "2026-10-15",
+      "latest_close": 3950.0,
+      "change_pct": -0.25
+    },
+    {
+      "ticker": "TLKM.JK",
+      "company_name": "Telkom Indonesia (Persero) Tbk PT",
+      "sector": "Telecommunication & Infrastructure",
+      "latest_date": "2026-10-15",
+      "latest_close": 2210.0,
+      "change_pct": -1.78
+    }
+  ]
+}

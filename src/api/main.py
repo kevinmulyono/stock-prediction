@@ -49,12 +49,21 @@ def startup_db_check():
     """Ensure schema exists and stocks metadata is seeded when running in cloud."""
     try:
         from src.database.connection import init_db, get_db_session
-        from src.database.models import Stock
+        from src.database.models import Stock, MarketData
         from src.database.seed import seed_stocks
         init_db()
         with get_db_session() as session:
             if session.query(Stock).count() == 0:
                 seed_stocks(session)
+        # Sync latest market data from Yahoo Finance on startup (cloud)
+        try:
+            from src.data.sync_daily import sync_market_data
+            sync_result = sync_market_data()
+            import logging
+            logging.getLogger("uvicorn").info(f"Startup market data sync: {sync_result}")
+        except Exception as sync_err:
+            import logging
+            logging.getLogger("uvicorn").warning(f"Startup sync skipped: {sync_err}")
     except Exception as e:
         import logging
         logging.getLogger("uvicorn").warning(f"Startup DB initialization notice: {e}")

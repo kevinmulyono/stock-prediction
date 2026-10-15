@@ -1,0 +1,19 @@
+{
+  "status": "healthy",
+  "mode": "static_netlify",
+  "database_connected": true,
+  "total_stocks": 5,
+  "total_market_data": 10553,
+  "total_predictions": 11715,
+  "latest_market_date": "2026-10-15",
+  "latest_prediction_date": "2026-10-16",
+  "active_models": [
+    "ensemble",
+    "lstm",
+    "lightgbm",
+    "logistic_regression",
+    "xgboost",
+    "random_forest"
+  ],
+  "timestamp": "2026-10-15T08:15:45.719691"
+}

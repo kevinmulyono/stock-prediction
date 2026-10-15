@@ -1,0 +1,71 @@
+{
+  "total_models": 6,
+  "data": [
+    {
+      "model": "logistic_regression",
+      "roc_auc": 0.5538,
+      "brier_score": 0.2447,
+      "log_loss": 0.6826,
+      "accuracy": 57.18,
+      "precision": 55.21,
+      "recall": 18.38,
+      "f1_score": 27.58,
+      "threshold": 0.5
+    },
+    {
+      "model": "random_forest",
+      "roc_auc": 0.5524,
+      "brier_score": 0.2452,
+      "log_loss": 0.6837,
+      "accuracy": 56.77,
+      "precision": 53.11,
+      "recall": 21.73,
+      "f1_score": 30.84,
+      "threshold": 0.5
+    },
+    {
+      "model": "Ensemble (Track B)",
+      "roc_auc": 0.5468,
+      "brier_score": 0.2452,
+      "log_loss": 0.6836,
+      "accuracy": 55.74,
+      "precision": 50.36,
+      "recall": 16.18,
+      "f1_score": 24.5,
+      "threshold": 0.5
+    },
+    {
+      "model": "LSTM/GRU",
+      "roc_auc": 0.5453,
+      "brier_score": 0.2454,
+      "log_loss": 0.684,
+      "accuracy": 55.85,
+      "precision": 50.64,
+      "recall": 18.27,
+      "f1_score": 26.85,
+      "threshold": 0.5
+    },
+    {
+      "model": "LightGBM",
+      "roc_auc": 0.5393,
+      "brier_score": 0.2454,
+      "log_loss": 0.6839,
+      "accuracy": 56.31,
+      "precision": 53.48,
+      "recall": 11.56,
+      "f1_score": 19.01,
+      "threshold": 0.5
+    },
+    {
+      "model": "xgboost",
+      "roc_auc": 0.5278,
+      "brier_score": 0.2464,
+      "log_loss": 0.686,
+      "accuracy": 56.46,
+      "precision": 52.31,
+      "recall": 20.92,
+      "f1_score": 29.89,
+      "threshold": 0.5
+    }
+  ]
+}
