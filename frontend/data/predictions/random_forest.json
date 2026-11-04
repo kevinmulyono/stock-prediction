@@ -1,67 +1,73 @@
 {
-  "latest_target_date": "2026-08-31",
+  "as_of_date": "2026-10-15",
+  "latest_target_date": "2026-10-16",
   "model": "random_forest",
   "count": 5,
   "data": [
     {
       "ticker": "ASII.JK",
       "company_name": "Astra International Tbk PT",
-      "target_date": "2026-08-31",
+      "as_of_date": "2026-10-15",
+      "target_date": "2026-10-16",
       "model": "random_forest",
-      "probability_up": 43.29,
-      "raw_probability": 0.43286,
+      "probability_up": 43.62,
+      "raw_probability": 0.43623,
       "signal": "SELL",
       "prediction_label": "TURUN/FLAT",
       "latest_close": 4760.0,
-      "recommendation": "Model merekomendasikan Jual / Amankan Kas (P(Naik) = 43.3% \u2264 47%)."
+      "recommendation": "Model merekomendasikan Jual / Amankan Kas (P(Naik) = 43.6% \u2264 47%)."
     },
     {
       "ticker": "BBCA.JK",
       "company_name": "Bank Central Asia Tbk PT",
-      "target_date": "2026-08-31",
+      "as_of_date": "2026-10-15",
+      "target_date": "2026-10-16",
       "model": "random_forest",
-      "probability_up": 45.71,
-      "raw_probability": 0.45714,
-      "signal": "HOLD",
+      "probability_up": 38.13,
+      "raw_probability": 0.38129,
+      "signal": "SELL",
       "prediction_label": "TURUN/FLAT",
       "latest_close": 6025.0,
-      "recommendation": "Model netral / Tidak ada sinyal kuat (45.7%). Pertahankan posisi."
+      "recommendation": "Model merekomendasikan Jual / Amankan Kas (P(Naik) = 38.1% \u2264 47%)."
     },
     {
       "ticker": "BBRI.JK",
       "company_name": "Bank Rakyat Indonesia (Persero) Tbk PT",
-      "target_date": "2026-08-31",
+      "as_of_date": "2026-10-15",
+      "target_date": "2026-10-16",
       "model": "random_forest",
-      "probability_up": 40.34,
-      "raw_probability": 0.40343,
+      "probability_up": 35.13,
+      "raw_probability": 0.35129,
       "signal": "SELL",
       "prediction_label": "TURUN/FLAT",
       "latest_close": 3090.0,
-      "recommendation": "Model merekomendasikan Jual / Amankan Kas (P(Naik) = 40.3% \u2264 47%)."
+      "recommendation": "Model merekomendasikan Jual / Amankan Kas (P(Naik) = 35.1% \u2264 47%)."
     },
     {
       "ticker": "BMRI.JK",
       "company_name": "Bank Mandiri (Persero) Tbk PT",
-      "target_date": "2026-08-31",
+      "as_of_date": "2026-10-15",
+      "target_date": "2026-10-16",
       "model": "random_forest",
-      "probability_up": 48.23,
-      "raw_probability": 0.48225,
+      "probability_up": 49.34,
+      "raw_probability": 0.49338,
       "signal": "HOLD",
       "prediction_label": "TURUN/FLAT",
       "latest_close": 3950.0,
-      "recommendation": "Model netral / Tidak ada sinyal kuat (48.2%). Pertahankan posisi."
+      "recommendation": "Model netral / Tidak ada sinyal kuat (49.3%). Pertahankan posisi."
     },
     {
       "ticker": "TLKM.JK",
       "company_name": "Telkom Indonesia (Persero) Tbk PT",
-      "target_date": "2026-08-31",
+      "as_of_date": "2026-10-15",
+      "target_date": "2026-10-16",
       "model": "random_forest",
-      "probability_up": 42.94,
-      "raw_probability": 0.42942,
-      "signal": "SELL",
+      "probability_up": 48.48,
+      "raw_probability": 0.48484,
+      "signal": "HOLD",
       "prediction_label": "TURUN/FLAT",
       "latest_close": 2210.0,
-      "recommendation": "Model merekomendasikan Jual / Amankan Kas (P(Naik) = 42.9% \u2264 47%)."
+      "recommendation": "Model netral / Tidak ada sinyal kuat (48.5%). Pertahankan posisi."
     }
   ]
 }

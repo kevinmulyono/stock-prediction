@@ -65,12 +65,14 @@ def get_latest_predictions(
 
             raw_prob = float(pred.probability_up)
             prob_pct = round(raw_prob * 100, 2)
+            from src.models.predict_daily import get_next_business_day
+            t_plus_1 = get_next_business_day(pred.date)
 
             results.append(
                 PredictionItem(
                     ticker=pred.ticker,
                     company_name=company_name,
-                    target_date=str(pred.date),
+                    target_date=str(t_plus_1),
                     model=pred.model,
                     probability_up=prob_pct,
                     raw_probability=raw_prob,
@@ -81,8 +83,10 @@ def get_latest_predictions(
                 )
             )
 
+        from src.models.predict_daily import get_next_business_day
+        latest_t_plus_1 = get_next_business_day(max_date) if max_date else None
         return LatestPredictionsResponse(
-            latest_target_date=str(max_date),
+            latest_target_date=str(latest_t_plus_1),
             model=model,
             count=len(results),
             data=results

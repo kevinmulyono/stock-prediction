@@ -4,9 +4,9 @@
   "database_connected": true,
   "total_stocks": 5,
   "total_market_data": 10553,
-  "total_predictions": 11715,
+  "total_predictions": 12670,
   "latest_market_date": "2026-10-15",
-  "latest_prediction_date": "2026-10-16",
+  "latest_prediction_date": "2026-10-15",
   "active_models": [
     "ensemble",
     "lstm",
@@ -15,5 +15,5 @@
     "xgboost",
     "random_forest"
   ],
-  "timestamp": "2026-10-15T08:15:45.719691"
+  "timestamp": "2026-11-04T04:06:44.631409"
 }

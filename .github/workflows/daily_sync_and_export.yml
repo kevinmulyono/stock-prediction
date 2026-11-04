@@ -26,22 +26,16 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install pandas numpy yfinance requests SQLAlchemy scikit-learn lightgbm joblib
+          pip install pandas numpy yfinance requests SQLAlchemy scikit-learn lightgbm joblib xgboost
           pip install torch --extra-index-url https://download.pytorch.org/whl/cpu
 
-      - name: Sync Live Market Data (Yahoo Finance)
+      - name: Auto-Backfill Predictions & Sync Market Data
         run: |
-          python src/data/sync_daily.py
+          python src/models/auto_backfill.py --sync-live
 
-      - name: Run Daily Prediction Pipeline (T+1 Forecast)
+      - name: Generate T+1 Live Scoring Summary
         run: |
-          python src/models/predict_daily.py --model ensemble
-          python src/models/predict_daily.py --model lstm || true
-          python src/models/predict_daily.py --model lightgbm || true
-
-      - name: Export Static JSON Files for Netlify
-        run: |
-          python src/export_static_data.py
+          python src/models/predict_daily.py --model all || python src/models/predict_daily.py --model ensemble
 
       - name: Commit and Push Updated Static Data
         run: |
@@ -52,6 +46,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No data changes detected. Skipping commit."
           else
-            git commit -m "chore(data): auto-sync live market data & T+1 predictions [skip ci]"
+            git commit -m "chore(data): auto-sync live market data, backfill signals & T+1 predictions [skip ci]"
             git push
           fi

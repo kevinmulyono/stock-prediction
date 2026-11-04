@@ -2,23 +2,24 @@
 Daily Live Prediction Pipeline (Track B - Daf).
 
 Operational live daily scoring (T+1):
-1. Loads the latest market data (60+ days) for the 5 target IDX stocks:
+1. Automatically backfills predictions for any missing candles since the last run.
+2. Loads the latest market data (80 days) for the 5 target IDX stocks:
    - BBCA.JK (Bank Central Asia)
    - BBRI.JK (Bank Rakyat Indonesia)
    - BMRI.JK (Bank Mandiri)
    - TLKM.JK (Telkom Indonesia)
    - ASII.JK (Astra International)
-2. Computes 29 backward-looking technical indicators strictly without lookahead bias.
-3. Loads pre-trained model artifacts from reports/models/ without re-training:
+3. Computes 29 backward-looking technical indicators strictly without lookahead bias.
+4. Loads pre-trained model artifacts from reports/models/ without re-training:
    - LightGBM (reports/models/lightgbm_model.joblib)
    - PyTorch LSTM (reports/models/lstm_model.pt & reports/models/lstm_scaler.joblib)
    - Weighted Ensemble (0.15 LightGBM + 0.85 LSTM)
-4. Evaluates probability P(Up) and maps to discrete trading signals:
+5. Evaluates probability P(Up) and maps to discrete trading signals:
    - P(Up) >= 0.53 -> BUY
    - P(Up) <= 0.47 -> SELL
    - 0.47 < P(Up) < 0.53 -> HOLD
-5. Automatically ingests predictions into the SQLite 'predictions' table
-   with date = next_trading_day (T+1).
+6. Ingests predictions into the SQLite 'predictions' table indexed by candle date
+   so BUY/SELL indicators match market_data candles on the financial charts.
 
 Usage:
   python src/models/predict_daily.py --model ensemble
@@ -36,7 +37,9 @@ import sys
 from typing import Dict, List, Optional, Tuple
 
 # Add project root to sys.path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 import joblib
 import numpy as np
@@ -119,9 +122,9 @@ class DailyPredictor:
         feature_cols: Optional[List[str]] = None
     ):
         self.feature_cols = feature_cols or get_feature_columns()
-        self.lgbm_model_path = lgbm_model_path
-        self.lstm_model_path = lstm_model_path
-        self.lstm_scaler_path = lstm_scaler_path
+        self.lgbm_model_path = os.path.join(PROJECT_ROOT, lgbm_model_path)
+        self.lstm_model_path = os.path.join(PROJECT_ROOT, lstm_model_path)
+        self.lstm_scaler_path = os.path.join(PROJECT_ROOT, lstm_scaler_path)
         
         self.lgbm_model: Optional[LightGBMStockModel] = None
         self.lstm_model: Optional[StockLSTM] = None
@@ -280,6 +283,14 @@ def run_daily_prediction(
             sync_market_data(tickers)
         except Exception as sync_err:
             logger.warning(f"Live market data sync skipped/warning: {sync_err}")
+
+    # 0.5. Automatically backfill predictions for any historical candles missing signals
+    if as_of_date is None:
+        try:
+            from src.models.auto_backfill import run_auto_backfill
+            run_auto_backfill(tickers=tickers, sync_live=False, auto_export=False)
+        except Exception as bf_err:
+            logger.warning(f"Auto-backfill notice: {bf_err}")
     
     logger.info(f"=== Starting Daily Prediction Pipeline (Model: {model}) ===")
     
@@ -308,11 +319,11 @@ def run_daily_prediction(
         pred_output = predictor.predict_ticker(ticker_data, model_type=model)
         
         ticker_as_of = pred_output["as_of_date"]
-        # Pastikan ticker_as_of adalah tipe `date`, bukan string
         if isinstance(ticker_as_of, str):
             ticker_as_of = datetime.strptime(ticker_as_of, "%Y-%m-%d").date()
-        elif hasattr(ticker_as_of, 'date'):  # datetime object
+        elif hasattr(ticker_as_of, 'date'):
             ticker_as_of = ticker_as_of.date()
+
         if target_date_str:
             t_plus_1 = datetime.strptime(target_date_str, "%Y-%m-%d").date()
         else:
@@ -336,7 +347,7 @@ def run_daily_prediction(
             })
             
             db_records.append({
-                "date": t_plus_1,
+                "date": ticker_as_of,
                 "ticker": ticker,
                 "model": m_name,
                 "probability_up": p_up,

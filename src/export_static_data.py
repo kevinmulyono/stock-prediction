@@ -9,7 +9,7 @@ This enables 100% free hosting on Netlify without requiring a persistent Python 
 import os
 import sys
 import json
-from datetime import datetime
+from datetime import date, datetime, timedelta
 import pandas as pd
 from sqlalchemy import desc, func
 
@@ -24,6 +24,13 @@ from src.database.models import Stock, MarketData, Prediction
 EXPORT_DIR = os.path.join(PROJECT_ROOT, "frontend", "data")
 MODELS = ["ensemble", "lstm", "lightgbm", "logistic_regression", "xgboost", "random_forest"]
 TICKERS = ["BBCA.JK", "BBRI.JK", "BMRI.JK", "TLKM.JK", "ASII.JK"]
+
+
+def get_next_business_day(as_of_date: date) -> date:
+    next_day = as_of_date + timedelta(days=1)
+    while next_day.weekday() >= 5:  # 5=Saturday, 6=Sunday
+        next_day += timedelta(days=1)
+    return next_day
 
 
 def get_recommendation_text(signal: str, prob_up: float) -> str:
@@ -138,11 +145,13 @@ def export_predictions(session, base_dir):
             latest_close = float(latest_md[0]) if latest_md else None
             raw_prob = float(pred.probability_up)
             prob_pct = round(raw_prob * 100, 2)
+            t_plus_1 = get_next_business_day(pred.date)
 
             items.append({
                 "ticker": pred.ticker,
                 "company_name": company_name,
-                "target_date": str(pred.date),
+                "as_of_date": str(pred.date),
+                "target_date": str(t_plus_1),
                 "model": pred.model,
                 "probability_up": prob_pct,
                 "raw_probability": raw_prob,
@@ -152,10 +161,12 @@ def export_predictions(session, base_dir):
                 "recommendation": get_recommendation_text(pred.signal, prob_pct)
             })
 
+        latest_t_plus_1 = get_next_business_day(max_date) if max_date else None
         out_file = os.path.join(pred_dir, f"{model}.json")
         with open(out_file, "w", encoding="utf-8") as f:
             json.dump({
-                "latest_target_date": str(max_date),
+                "as_of_date": str(max_date),
+                "latest_target_date": str(latest_t_plus_1),
                 "model": model,
                 "count": len(items),
                 "data": items
