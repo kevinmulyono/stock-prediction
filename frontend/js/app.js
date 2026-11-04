@@ -97,7 +97,8 @@ function showToast(message, type = 'success') {
 }
 
 // Dual-Mode Data Service (Live FastAPI with instant fallback to Static JSON)
-let isStaticMode = false;
+const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+let isStaticMode = !isLocalhost;
 const historyCache = {};
 const signalsCache = {};
 
@@ -106,17 +107,20 @@ async function fetchWithFallback(apiEndpoint, staticPath) {
     try {
       const res = await fetch(apiEndpoint);
       if (res.ok) {
-        return await res.json();
+        const contentType = res.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+          return await res.json();
+        }
       }
-      // If 404 or server error, switch to static mode
       isStaticMode = true;
     } catch (e) {
       isStaticMode = true;
     }
   }
 
-  // Load static JSON directly
-  const staticRes = await fetch(staticPath);
+  // Load static JSON directly with cache-busting to prevent stale browser cache
+  const url = `${staticPath}?t=${Date.now()}`;
+  const staticRes = await fetch(url, { cache: 'no-store' });
   if (!staticRes.ok) {
     throw new Error(`Gagal memuat data statis (${staticPath}): ${staticRes.statusText}`);
   }
@@ -836,6 +840,11 @@ async function handleTriggerDaily() {
 
 async function refreshAllData() {
   try {
+    if (isStaticMode) {
+      elements.apiStatusText.textContent = 'Netlify Static (Auto-Sync)';
+      elements.apiStatusBadge.style.borderColor = 'rgba(16, 185, 129, 0.4)';
+    }
+
     const [stocksRes, predsRes, backtestRes, mlRes, regRes] = await Promise.all([
       api.getStocks(),
       api.getLatestPredictions(state.selectedModel),
